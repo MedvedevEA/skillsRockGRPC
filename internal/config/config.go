@@ -12,6 +12,7 @@ import (
 
 type Config struct {
 	Env        string     `yaml:"env" env:"TODO_ENV" env-default:"local"`
+	SecretPath string     `yaml:"secretPath" env:"TODO_SECRET_PATH" env-required:"true"`
 	Api        Api        `yaml:"api"`
 	PostgreSQL PostgreSQL `yaml:"postgreSql"`
 }
