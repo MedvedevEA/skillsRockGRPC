@@ -1,5 +1,5 @@
 env: "local" # local, dev, prod
-
+secretPath: ./../../secret/rsa
 api:
   addr: :50051
   writeTimeout: 15s

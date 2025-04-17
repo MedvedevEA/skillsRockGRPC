@@ -6,7 +6,6 @@ import (
 	"net"
 	"skillsRockGRPC/internal/authserver"
 	"skillsRockGRPC/internal/config"
-	"skillsRockGRPC/internal/service"
 
 	pb "skillsRockGRPC/gen/go/auth/v1"
 
@@ -19,9 +18,9 @@ type App struct {
 	cfg        *config.Api
 }
 
-func New(service *service.Service, lg *slog.Logger, cfg *config.Api) *App {
+func New(service authserver.Service, lg *slog.Logger, cfg *config.Api) *App {
 	grpcServer := grpc.NewServer()
-	authServer := authserver.New(nil, lg)
+	authServer := authserver.New(service, lg)
 	pb.RegisterAuthServiceServer(grpcServer, authServer)
 
 	return &App{

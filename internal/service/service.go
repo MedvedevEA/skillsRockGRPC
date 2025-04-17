@@ -6,7 +6,11 @@ import (
 	"log/slog"
 	"os"
 	"skillsRockGRPC/internal/repository"
+	repoDto "skillsRockGRPC/internal/repository/dto"
+	srvDto "skillsRockGRPC/internal/service/dto"
+	"skillsRockGRPC/pkg/jwt"
 	"skillsRockGRPC/pkg/secret"
+	"skillsRockGRPC/pkg/servererrors"
 
 	"github.com/pkg/errors"
 )
@@ -35,12 +39,35 @@ func MustNew(store repository.Repository, lg *slog.Logger, secretPath string) *S
 	}
 }
 
-func (s *Service) Register(dto *Service) (string, error) {
-	return "", nil
+func (s *Service) Register(dto *srvDto.Register) (string, error) {
+	hashPassword := secret.GetHash(dto.Password)
+	_, err := s.store.AddUser(&repoDto.AddUser{
+		Login:    dto.Login,
+		Password: hashPassword,
+		Email:    dto.Email,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return "User registered successfully", nil
 }
-func (s *Service) Login(dto *Service) (string, error) {
-	return "", nil
+func (s *Service) Login(dto *srvDto.Login) (string, error) {
+	user, err := s.store.GetUser(dto.Login)
+	if err != nil {
+		return "", err
+	}
+	if !secret.CheckHash(dto.Password, user.Password) {
+		return "", servererrors.ErrInvalidUsernameOrPassword
+	}
+	token, err := jwt.GenerateToken(user.Login, secret.MarshalRSAPrivate(s.secret, ""))
+	if err != nil {
+		return "", servererrors.ErrInternalServerError
+	}
+	return token, nil
 }
-func (s *Service) CheckToken(dto *Service) (bool, error) {
-	return false, nil
+func (s *Service) CheckToken(dto *srvDto.CheckToken) (bool, error) {
+	_, err := jwt.ParseToken(dto.Token, secret.MarshalRSAPrivate(s.secret, ""))
+	s.lg.Info("", slog.Any("error", err))
+	return err == nil, nil
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type Repository interface {
-	AddUser(dto *dto.AddUser) (*entity.User, error)
-	GetUser(userId *uuid.UUID) (*entity.User, error)
+	AddUser(dto *dto.AddUser) (*uuid.UUID, error)
+	GetUser(login string) (*entity.User, error)
 	UpdateUser(dto *dto.UpdateUser) error
 }

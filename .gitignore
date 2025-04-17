@@ -26,3 +26,4 @@ go.work.sum
 
 # my list
 /config/local.yml
+/secret/*

@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 
 	"golang.org/x/crypto/ssh"
 )
 
+// RSA
 func GenerateKey(keySize int) (*rsa.PrivateKey, ssh.PublicKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, keySize)
 	if err != nil {
@@ -42,4 +45,15 @@ func UnmarshalRSAPrivate(bytes []byte) (*rsa.PrivateKey, error) {
 func UnmarshalRSAPublic(bytes []byte) (ssh.PublicKey, error) {
 	pub, _, _, _, err := ssh.ParseAuthorizedKey(bytes)
 	return pub, err
+}
+
+// SHA256
+func GetHash(text string) string {
+	hash := sha256.New()
+	hash.Write([]byte(text))
+	return hex.EncodeToString(hash.Sum(nil))
+}
+func CheckHash(text string, hash string) bool {
+	textHash := GetHash(text)
+	return textHash == hash
 }
