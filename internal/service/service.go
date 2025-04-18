@@ -49,7 +49,6 @@ func (s *Service) Register(dto *srvDto.Register) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return "User registered successfully", nil
 }
 func (s *Service) Login(dto *srvDto.Login) (string, error) {
@@ -58,11 +57,11 @@ func (s *Service) Login(dto *srvDto.Login) (string, error) {
 		return "", err
 	}
 	if !secret.CheckHash(dto.Password, user.Password) {
-		return "", servererrors.ErrInvalidUsernameOrPassword
+		return "", servererrors.ErrorInvalidUsernameOrPassword
 	}
 	token, err := jwt.GenerateToken(user.Login, secret.MarshalRSAPrivate(s.secret, ""))
 	if err != nil {
-		return "", servererrors.ErrInternalServerError
+		return "", servererrors.ErrorInternalServerError
 	}
 	return token, nil
 }

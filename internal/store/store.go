@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 )
@@ -65,9 +66,16 @@ func (s *Store) AddUser(dto *dto.AddUser) (*uuid.UUID, error) {
 	const op = "store.AddUser"
 	userId := new(uuid.UUID)
 	err := s.pool.QueryRow(context.Background(), addUserQuery, dto.Login, dto.Password, dto.Email).Scan(userId)
+
+	if err, ok := err.(*pgconn.PgError); ok {
+		if err.Code == "23505" && err.ConstraintName == "user_login_unique" {
+			s.lg.Error("failed to add user", slog.String("op", op), slog.Any("error", err))
+			return nil, servererrors.ErrorUsernameAlreadyExists
+		}
+	}
 	if err != nil {
 		s.lg.Error("failed to add user", slog.String("op", op), slog.Any("error", err))
-		return nil, servererrors.ErrInternalServerError
+		return nil, servererrors.ErrorInternalServerError
 	}
 	return userId, err
 }
@@ -77,11 +85,11 @@ func (s *Store) GetUser(login string) (*entity.User, error) {
 	err := s.pool.QueryRow(context.Background(), getUserQuery, login).Scan(&user.UserId, &user.Login, &user.Password, &user.Email)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.lg.Error("failed to get user", slog.String("op", op), slog.Any("error", err))
-		return nil, servererrors.ErrRecordNotFound
+		return nil, servererrors.ErrorRecordNotFound
 	}
 	if err != nil {
 		s.lg.Error("failed to get user", slog.String("op", op), slog.Any("error", err))
-		return nil, servererrors.ErrInternalServerError
+		return nil, servererrors.ErrorInternalServerError
 	}
 	return user, err
 }
@@ -91,11 +99,11 @@ func (s *Store) UpdateUser(dto *dto.UpdateUser) error {
 	err := s.pool.QueryRow(context.Background(), getUserQuery, dto.UserId, dto.Login, dto.Password, dto.Email).Scan(&user.UserId, &user.Login, &user.Password, &user.Email)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.lg.Error("failed to update user", slog.String("op", op), slog.Any("error", err))
-		return servererrors.ErrRecordNotFound
+		return servererrors.ErrorRecordNotFound
 	}
 	if err != nil {
 		s.lg.Error("failed to update user", slog.String("op", op), slog.Any("error", err))
-		return servererrors.ErrInternalServerError
+		return servererrors.ErrorInternalServerError
 	}
 	return nil
 }
