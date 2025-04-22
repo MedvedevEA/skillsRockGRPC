@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"skillsRockGRPC/internal/authserver"
-	"skillsRockGRPC/internal/config"
 
 	pb "skillsRockGRPC/gen/go/auth/v1"
+	"skillsRockGRPC/internal/authservice"
+	"skillsRockGRPC/internal/config"
 
 	"google.golang.org/grpc"
 )
@@ -18,9 +18,9 @@ type App struct {
 	cfg        *config.Api
 }
 
-func New(service authserver.Service, lg *slog.Logger, cfg *config.Api) *App {
+func New(service authservice.Service, lg *slog.Logger, cfg *config.Api) *App {
 	grpcServer := grpc.NewServer()
-	authServer := authserver.New(service, lg)
+	authServer := authservice.New(service, lg)
 	pb.RegisterAuthServiceServer(grpcServer, authServer)
 
 	return &App{
