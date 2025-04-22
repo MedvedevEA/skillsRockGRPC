@@ -1,0 +1,17 @@
+env: "local" # local, dev, prod
+secretPath: ./../../secret/rsa
+api:
+  addr: :50051
+  writeTimeout: 15s
+  name: SkillsRockAuth
+
+postgreSql:
+ host: localhost
+ port: 5432
+ name: postgres
+ user: postgres
+ password: postgres
+ sslMode: disable
+ poolMaxConns: 10
+ poolMaxConnLifeTime: 300s
+ poolMaxConnIidleTime: 150s
