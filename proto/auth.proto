@@ -2,27 +2,48 @@ syntax="proto3";
 
 package auth;
 
-option go_package = "autht/v1;authv1";
+option go_package = "auth/v2;authv2";
 
 service AuthService {
     rpc Register (RegisterRequest) returns (RegisterResponse);
+    rpc Unregister (UnregisterRequest) returns (UnregisterResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
+    rpc Logout(LogoutRequest) returns (LogoutResponse);
     rpc CheckToken(CheckTokenRequest) returns (CheckTokenResponse);
+    rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
+    rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+    
+
 }
 message RegisterRequest {
-    string username=1;
+    string login=1;
     string password=2;
+    string email=3;
 }
 message RegisterResponse {
     string message=1;
 }
+message UnregisterRequest {
+    string token=1;
+}
+message UnregisterResponse {
+    string message=1;
+}
 
 message LoginRequest {
-    string username=1;
+    string login=1;
     string password=2;
+    string deviceCode=3;
 }
 message LoginResponse {
     string token=1;
+}
+
+message LogoutRequest {
+    string token=1;
+}
+message LogoutResponse {
+    string message=1;
 }
 
 message CheckTokenRequest {
@@ -30,4 +51,17 @@ message CheckTokenRequest {
 }
 message CheckTokenResponse {
     bool ok=1; 
+}
+message RevokeTokenRequest {
+    string token=1;
+}
+message RevokeTokenResponse {
+    string message=1;
+}
+message ChangePasswordRequest {
+    string token=1;
+    string newPassword=2;
+}
+message ChangePasswordResponse {
+    string message=1; 
 }

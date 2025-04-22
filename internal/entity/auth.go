@@ -1,6 +1,10 @@
 package entity
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
 	UserId   *uuid.UUID `json:"user_id"`
@@ -9,9 +13,20 @@ type User struct {
 	Email    string     `json:"email"`
 }
 
-type Service struct {
-	ServiceID  *uuid.UUID `json:"service_id"`
-	Name       string     `json:"name"`
-	PrivateKey string     `json:"private_key"`
-	PublicKey  string     `json:"public_key"`
+type Role struct {
+	RoleId *uuid.UUID `json:"role_id"`
+	Name   string     `json:"name"`
+}
+type Token struct {
+	TokenId       *uuid.UUID `json:"token_id"`
+	UserId        *uuid.UUID `json:"user_id"`
+	DeviceCode    *uuid.UUID `json:"device_code"`
+	Token         string     `json:"token"`
+	TokenTypeCode rune       `json:"token_type_code"`
+	ExpirationAt  time.Time  `json:"expiration_at"`
+	IsRevoke      bool       `json:"is_revoke"`
+}
+type TokenType struct {
+	TokenTypeCode rune   `json:"token_type_code"`
+	Name          string `json:"name"`
 }

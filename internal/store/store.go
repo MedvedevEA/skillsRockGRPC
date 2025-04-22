@@ -79,7 +79,7 @@ func (s *Store) AddUser(dto *dto.AddUser) (*uuid.UUID, error) {
 	}
 	return userId, err
 }
-func (s *Store) GetUser(login string) (*entity.User, error) {
+func (s *Store) GetUserByLogin(login string) (*entity.User, error) {
 	const op = "store.GetUser"
 	user := new(entity.User)
 	err := s.pool.QueryRow(context.Background(), getUserQuery, login).Scan(&user.UserId, &user.Login, &user.Password, &user.Email)
@@ -106,4 +106,20 @@ func (s *Store) UpdateUser(dto *dto.UpdateUser) error {
 		return servererrors.ErrorInternalServerError
 	}
 	return nil
+}
+
+func (s *Store) RemoveUser(login string) error {
+	return nil
+}
+func (s *Store) GetRolesByUser(userId *uuid.UUID) ([]*entity.Role, error) {
+	return nil, nil
+}
+func (s *Store) AddTokenWithId(dto *dto.AddTokenWithId) error {
+	return nil
+}
+func (s *Store) GetToken(tokenId *uuid.UUID) (*entity.Token, error) {
+	return nil, nil
+}
+func (s *Store) UpdateUserToken(tokenId *uuid.UUID) (*entity.Token, error) {
+	return nil, nil
 }
