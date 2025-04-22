@@ -4,7 +4,7 @@
 // 	protoc        v6.30.2
 // source: proto/auth.proto
 
-package authv2
+package auth
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -451,7 +451,7 @@ func (x *CheckTokenRequest) GetToken() string {
 
 type CheckTokenResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ok            bool                   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -486,11 +486,11 @@ func (*CheckTokenResponse) Descriptor() ([]byte, []int) {
 	return file_proto_auth_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *CheckTokenResponse) GetOk() bool {
+func (x *CheckTokenResponse) GetMessage() string {
 	if x != nil {
-		return x.Ok
+		return x.Message
 	}
-	return false
+	return ""
 }
 
 type RevokeTokenRequest struct {
@@ -705,9 +705,9 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\x0eLogoutResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\")\n" +
 	"\x11CheckTokenRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"$\n" +
-	"\x12CheckTokenResponse\x12\x0e\n" +
-	"\x02ok\x18\x01 \x01(\bR\x02ok\"*\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\".\n" +
+	"\x12CheckTokenResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"*\n" +
 	"\x12RevokeTokenRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"/\n" +
 	"\x13RevokeTokenResponse\x12\x18\n" +
@@ -726,7 +726,7 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\n" +
 	"CheckToken\x12\x17.auth.CheckTokenRequest\x1a\x18.auth.CheckTokenResponse\x12B\n" +
 	"\vRevokeToken\x12\x18.auth.RevokeTokenRequest\x1a\x19.auth.RevokeTokenResponse\x12K\n" +
-	"\x0eChangePassword\x12\x1b.auth.ChangePasswordRequest\x1a\x1c.auth.ChangePasswordResponseB\x10Z\x0eauth/v2;authv2b\x06proto3"
+	"\x0eChangePassword\x12\x1b.auth.ChangePasswordRequest\x1a\x1c.auth.ChangePasswordResponseB\x0eZ\fauth/v2;authb\x06proto3"
 
 var (
 	file_proto_auth_proto_rawDescOnce sync.Once

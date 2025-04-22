@@ -2,7 +2,7 @@ syntax="proto3";
 
 package auth;
 
-option go_package = "auth/v2;authv2";
+option go_package = "auth/v2;auth";
 
 service AuthService {
     rpc Register (RegisterRequest) returns (RegisterResponse);
@@ -50,7 +50,7 @@ message CheckTokenRequest {
     string token=1;
 }
 message CheckTokenResponse {
-    bool ok=1; 
+    string message=1; 
 }
 message RevokeTokenRequest {
     string token=1;

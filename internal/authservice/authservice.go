@@ -57,7 +57,7 @@ func (a *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 		Email:    req.Email,
 	})
 	if err != nil {
-		return &pb.RegisterResponse{Message: "failure"}, err
+		return nil, err
 	}
 	return &pb.RegisterResponse{Message: "success"}, nil
 }
@@ -101,50 +101,13 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 	return &pb.LoginResponse{Token: tokenString}, nil
 }
 func (a *AuthService) CheckToken(ctx context.Context, req *pb.CheckTokenRequest) (*pb.CheckTokenResponse, error) {
-	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
 		return a.secretKey, nil
 	})
 	if err != nil {
 		return nil, err
+
 	}
-	return &pb.CheckTokenResponse{Ok: token.Valid}, nil
+	return &pb.CheckTokenResponse{Message: "success"}, nil
+
 }
-
-/*
-
-
-
-
-func (s *Service) Register(dto *srvDto.Register) (string, error) {
-	hashPassword := secret.GetHash(dto.Password)
-	_, err := s.store.AddUser(&repoDto.AddUser{
-		Login:    dto.Login,
-		Password: hashPassword,
-		Email:    dto.Email,
-	})
-	if err != nil {
-		return "", err
-	}
-	return "User registered successfully", nil
-}
-func (s *Service) Login(dto *srvDto.Login) (string, error) {
-	user, err := s.store.GetUser(dto.Login)
-	if err != nil {
-		return "", err
-	}
-	if !secret.CheckHash(dto.Password, user.Password) {
-		return "", servererrors.ErrorInvalidUsernameOrPassword
-	}
-	token, err := jwt.GenerateToken(user.Login, (*uuid.UUID)(s.secretKey))
-	if err != nil {
-		return "", servererrors.ErrorInternalServerError
-	}
-	return token, nil
-}
-func (s *Service) CheckToken(token string) (bool, error) {
-	token, err := jwt.ParseToken(token, s.secretKey)
-	if err !=nil
-	s.lg.Info("", slog.Any("error", err))
-	return err == nil, nil
-}
-*/
