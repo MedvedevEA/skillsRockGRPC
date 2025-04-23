@@ -60,6 +60,7 @@ const (
 	addUserQuery    = `INSERT INTO "user" (login,password,email) VALUES ($1, $2, $3) RETURNING user_id`
 	getUserQuery    = `SELECT * FROM "user" WHERE login=$1`
 	updateUserQuery = `UPDATE "user" SET login=$2, password=$3, email=$4 WHERE user_id=$1 RETURNING user_id`
+	removeUserQuery = `DELETE FROM "user" WHERE user_id=$1 RETURNING user_id`
 )
 
 func (s *Store) AddUser(dto *dto.AddUser) (*uuid.UUID, error) {
@@ -70,14 +71,14 @@ func (s *Store) AddUser(dto *dto.AddUser) (*uuid.UUID, error) {
 	if err, ok := err.(*pgconn.PgError); ok {
 		if err.Code == "23505" && err.ConstraintName == "user_login_unique" {
 			s.lg.Error("failed to add user", slog.String("op", op), slog.Any("error", err))
-			return nil, servererrors.ErrorUsernameAlreadyExists
+			return nil, servererrors.ErrorLoginAlreadyExists
 		}
 	}
 	if err != nil {
 		s.lg.Error("failed to add user", slog.String("op", op), slog.Any("error", err))
 		return nil, servererrors.ErrorInternalServerError
 	}
-	return userId, err
+	return userId, nil
 }
 func (s *Store) GetUserByLogin(login string) (*entity.User, error) {
 	const op = "store.GetUser"
@@ -108,10 +109,21 @@ func (s *Store) UpdateUser(dto *dto.UpdateUser) error {
 	return nil
 }
 
-func (s *Store) RemoveUser(login string) error {
+func (s *Store) RemoveUser(userId *uuid.UUID) error {
+	const op = "store.RemoveUser"
+	err := s.pool.QueryRow(context.Background(), removeUserQuery, userId).Scan(userId)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		s.lg.Error("failed to remove user", slog.String("op", op), slog.Any("error", err))
+		return servererrors.ErrorRecordNotFound
+	}
+	if err != nil {
+		s.lg.Error("failed to remove user", slog.String("op", op), slog.Any("error", err))
+		return servererrors.ErrorInternalServerError
+	}
 	return nil
 }
-func (s *Store) GetRolesByUser(userId *uuid.UUID) ([]*entity.Role, error) {
+func (s *Store) GetRolesByUserId(userId *uuid.UUID) ([]*entity.Role, error) {
 	return nil, nil
 }
 func (s *Store) AddTokenWithId(dto *dto.AddTokenWithId) error {

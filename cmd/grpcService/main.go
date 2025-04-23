@@ -19,7 +19,7 @@ func main() {
 
 	store := store.MustNew(context.Background(), lg, &cfg.PostgreSQL)
 
-	authService := authservice.New(store, lg, &cfg.Token)
+	authService := authservice.MustNew(store, lg, &cfg.Token)
 
 	grpcServer := grpcserver.New(authService, lg, &cfg.Api)
 	go func() {

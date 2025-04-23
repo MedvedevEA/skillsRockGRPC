@@ -29,7 +29,7 @@ type AuthService struct {
 	lg              *slog.Logger
 }
 
-func New(store repository.Repository, lg *slog.Logger, cfg *config.Token) *AuthService {
+func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *AuthService {
 	const op = "authservice.MustNew"
 	secretByteArray, err := os.ReadFile(cfg.SecretPath)
 	if err != nil {
@@ -51,6 +51,7 @@ func New(store repository.Repository, lg *slog.Logger, cfg *config.Token) *AuthS
 }
 
 func (a *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+	//const op = "authService.Register"
 	_, err := a.store.AddUser(&dto.AddUser{
 		Login:    req.Login,
 		Password: secret.GetHash(req.Password),
@@ -62,12 +63,14 @@ func (a *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 	return &pb.RegisterResponse{Message: "success"}, nil
 }
 func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	//const op = "authService.Login"
 	user, err := a.store.GetUserByLogin(req.Login)
 	if err != nil {
 		return nil, err
 	}
 	if !secret.CheckHash(req.Password, user.Password) {
-		return nil, servererrors.ErrorInvalidUsernameOrPassword
+		err := servererrors.ErrorInvalidLoginOrPassword
+		return nil, err
 	}
 
 	tokenId := uuid.New()
@@ -101,13 +104,36 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 	return &pb.LoginResponse{Token: tokenString}, nil
 }
 func (a *AuthService) CheckToken(ctx context.Context, req *pb.CheckTokenRequest) (*pb.CheckTokenResponse, error) {
+	//const op = "authService.CheckToken"
 	_, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
 		return a.secretKey, nil
 	})
 	if err != nil {
 		return nil, err
-
 	}
 	return &pb.CheckTokenResponse{Message: "success"}, nil
+
+}
+func (a *AuthService) Unregister(ctx context.Context, req *pb.UnregisterRequest) (*pb.UnregisterResponse, error) {
+	//const op = "authService.Unregister"
+	tokenJwt, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
+		return a.secretKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := tokenJwt.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, servererrors.ErrorInvalidTokenClaims
+	}
+	userId, err := uuid.Parse(claims["sub"].(string))
+	if err != nil {
+		return nil, servererrors.ErrorInvalidTokenClaims
+	}
+	err = a.store.RemoveUser(&userId)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.UnregisterResponse{Message: "success"}, nil
 
 }
