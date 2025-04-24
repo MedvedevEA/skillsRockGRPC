@@ -70,6 +70,8 @@ func (a *AuthService) Unregister(ctx context.Context, req *pb.UnregisterRequest)
 	if err != nil {
 		return nil, err
 	}
+	//Для таблиц user и token установлено правило каскадного удаления записей.
+
 	return &pb.UnregisterResponse{Message: "success"}, nil
 
 }
@@ -83,23 +85,66 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		err := servererrors.ErrorInvalidLoginOrPassword
 		return nil, err
 	}
-
-	tokenString, tokenClaims, err := jwttoken.CreateToken(user.UserId, req.DeviceCode, a.accessLifetime, a.secretKey)
+	roleNames, err := a.store.GetRolesByUserId(user.UserId)
+	if err != nil {
+		return nil, err
+	}
+	err = a.store.RemoveTokenByUserIdAndDeviceCode(&dto.RemoveTokenByUserIdAndDeviceCode{
+		UserId:     user.UserId,
+		DeviceCode: req.DeviceCode,
+	})
+	if err != nil {
+		return nil, err
+	}
+	//access token
+	accessTokenString, accessTokenClaims, err := jwttoken.CreateToken(user.UserId, req.DeviceCode, roleNames, a.accessLifetime, a.secretKey)
 	if err != nil {
 		return nil, err
 	}
 	if err := a.store.AddTokenWithId(&dto.AddTokenWithId{
-		TokenId:       tokenClaims.Jti,
+		TokenId:       accessTokenClaims.Jti,
 		UserId:        user.UserId,
 		DeviceCode:    req.DeviceCode,
-		Token:         tokenString,
+		Token:         accessTokenString,
 		TokenTypeCode: 'a',
-		ExpirationAt:  tokenClaims.ExpiresAt.Time,
+		ExpirationAt:  accessTokenClaims.ExpiresAt.Time,
 		IsRevoke:      false,
 	}); err != nil {
 		return nil, err
 	}
-	return &pb.LoginResponse{Token: tokenString}, nil
+	//refresh token
+	refreshTokenString, refreshTokenClaims, err := jwttoken.CreateToken(user.UserId, req.DeviceCode, roleNames, a.refrashLifetime, a.secretKey)
+	if err != nil {
+		return nil, err
+	}
+	if err := a.store.AddTokenWithId(&dto.AddTokenWithId{
+		TokenId:       refreshTokenClaims.Jti,
+		UserId:        user.UserId,
+		DeviceCode:    req.DeviceCode,
+		Token:         refreshTokenString,
+		TokenTypeCode: 'r',
+		ExpirationAt:  refreshTokenClaims.ExpiresAt.Time,
+		IsRevoke:      false,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &pb.LoginResponse{AccessToken: accessTokenString, RefreshToken: refreshTokenString}, nil
+}
+func (a *AuthService) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.LogoutResponse, error) {
+	//const op = "authService.Logout"
+	tokenClaims, err := jwttoken.GetClaims(req.Token, a.secretKey)
+	if err != nil {
+		return nil, err
+	}
+	err = a.store.RemoveTokenByUserIdAndDeviceCode(&dto.RemoveTokenByUserIdAndDeviceCode{
+		UserId:     tokenClaims.Sub,
+		DeviceCode: tokenClaims.DeviceCode,
+	})
+	if err != nil {
+		return nil, servererrors.ErrorInternalServerError
+	}
+	return &pb.LogoutResponse{Message: "success"}, nil
 }
 func (a *AuthService) CheckToken(ctx context.Context, req *pb.CheckTokenRequest) (*pb.CheckTokenResponse, error) {
 	//const op = "authService.CheckToken"
@@ -125,8 +170,29 @@ func (a *AuthService) ChangePassword(ctx context.Context, req *pb.ChangePassword
 	if err != nil {
 		return nil, err
 	}
+	err = a.store.UpdateTokenRevokeByUserId(tokenClaims.Sub)
+	if err != nil {
+		return nil, err
+	}
 	return &pb.ChangePasswordResponse{
 		Message: "success",
 	}, nil
+}
+func (a *AuthService) RevokeToken(ctx context.Context, req *pb.RevokeTokenRequest) (*pb.RevokeTokenResponse, error) {
+	//const op = "authService.RevokeToken"
+	tokenClaims, err := jwttoken.GetClaims(req.Token, a.secretKey)
+	if err != nil {
+		return nil, err
+	}
 
+	err = a.store.UpdateTokenRevokeByUserIdAndDeviceCode(&dto.UpdateTokenRevokeByUserIdAndDeviceCode{
+		UserId:     tokenClaims.Sub,
+		DeviceCode: tokenClaims.DeviceCode,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.RevokeTokenResponse{
+		Message: "success",
+	}, nil
 }

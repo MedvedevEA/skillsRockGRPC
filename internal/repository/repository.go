@@ -13,9 +13,11 @@ type Repository interface {
 	UpdateUser(dto *dto.UpdateUser) error
 	RemoveUser(userId *uuid.UUID) error
 
-	GetRolesByUserId(userId *uuid.UUID) ([]*entity.Role, error)
+	GetRolesByUserId(userId *uuid.UUID) ([]string, error)
 
 	AddTokenWithId(dto *dto.AddTokenWithId) error
 	GetToken(tokenId *uuid.UUID) (*entity.Token, error)
-	UpdateUserToken(tokenId *uuid.UUID) (*entity.Token, error)
+	UpdateTokenRevokeByUserIdAndDeviceCode(dto *dto.UpdateTokenRevokeByUserIdAndDeviceCode) error
+	UpdateTokenRevokeByUserId(userId *uuid.UUID) error
+	RemoveTokenByUserIdAndDeviceCode(dto *dto.RemoveTokenByUserIdAndDeviceCode) error
 }

@@ -27,3 +27,11 @@ type AddTokenWithId struct {
 	ExpirationAt  time.Time
 	IsRevoke      bool
 }
+type UpdateTokenRevokeByUserIdAndDeviceCode struct {
+	UserId     *uuid.UUID
+	DeviceCode string
+}
+type RemoveTokenByUserIdAndDeviceCode struct {
+	UserId     *uuid.UUID
+	DeviceCode string
+}

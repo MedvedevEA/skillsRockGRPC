@@ -1,3 +1,4 @@
+//protoc --go_out=./gen/go --go-grpc_out=./gen/go ./proto/auth.proto
 syntax="proto3";
 
 package auth;
@@ -36,7 +37,8 @@ message LoginRequest {
     string deviceCode=3;
 }
 message LoginResponse {
-    string token=1;
+    string accessToken=1;
+    string refreshToken=2;
 }
 
 message LogoutRequest {

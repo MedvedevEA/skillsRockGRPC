@@ -10,17 +10,19 @@ import (
 )
 
 type TokenClaims struct {
-	Dev string     `json:"dev"`
-	Jti *uuid.UUID `json:"jti"`
-	Sub *uuid.UUID `json:"sub"`
+	DeviceCode string     `json:"device"`
+	Roles      []string   `json:"roles"`
+	Jti        *uuid.UUID `json:"jti"`
+	Sub        *uuid.UUID `json:"sub"`
 	jwt.RegisteredClaims
 }
 
-func CreateToken(sub *uuid.UUID, dev string, lifetime time.Duration, secretKey []byte) (string, *TokenClaims, error) {
+func CreateToken(sub *uuid.UUID, deviceCode string, roles []string, lifetime time.Duration, secretKey []byte) (string, *TokenClaims, error) {
 	jti := uuid.New()
 	now := time.Now()
 	tokenClaims := TokenClaims{
-		dev,  //device - код устройства
+		deviceCode, //device - код устройства
+		roles,
 		&jti, // JWT ID — уникальный идентификатор токена
 		sub,  // subject — субъект, которому выдан токен
 		jwt.RegisteredClaims{
