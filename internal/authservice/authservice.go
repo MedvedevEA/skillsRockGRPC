@@ -10,13 +10,11 @@ import (
 	"skillsRockGRPC/internal/repository"
 	"skillsRockGRPC/internal/repository/dto"
 
+	"skillsRockGRPC/pkg/jwttoken"
 	"skillsRockGRPC/pkg/secret"
 	"skillsRockGRPC/pkg/servererrors"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -62,6 +60,19 @@ func (a *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 	}
 	return &pb.RegisterResponse{Message: "success"}, nil
 }
+func (a *AuthService) Unregister(ctx context.Context, req *pb.UnregisterRequest) (*pb.UnregisterResponse, error) {
+	//const op = "authService.Unregister"
+	tokenClaims, err := jwttoken.GetClaims(req.Token, a.secretKey)
+	if err != nil {
+		return nil, err
+	}
+	err = a.store.RemoveUser(tokenClaims.Sub)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.UnregisterResponse{Message: "success"}, nil
+
+}
 func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	//const op = "authService.Login"
 	user, err := a.store.GetUserByLogin(req.Login)
@@ -73,30 +84,17 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		return nil, err
 	}
 
-	tokenId := uuid.New()
-	now := time.Now()
-	expirionAt := now.Add(a.accessLifetime)
-	claims := jwt.MapClaims{
-		"deviceCode": req.DeviceCode,
-
-		"sub": user.UserId,       // subject — субъект, которому выдан токен
-		"exp": expirionAt.Unix(), // expiration time — время, когда токен станет невалидным
-		"nbf": now.Unix(),        // not before — время, с которого токен должен считаться действительным
-		"jat": now.Unix(),        // issued at — время, в которое был выдан токен
-		"jti": tokenId,           // JWT ID — уникальный идентификатор токена
-	}
-	tokenJwt := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := tokenJwt.SignedString(a.secretKey)
+	tokenString, tokenClaims, err := jwttoken.CreateToken(user.UserId, req.DeviceCode, a.accessLifetime, a.secretKey)
 	if err != nil {
 		return nil, err
 	}
 	if err := a.store.AddTokenWithId(&dto.AddTokenWithId{
-		TokenId:       &tokenId,
+		TokenId:       tokenClaims.Jti,
 		UserId:        user.UserId,
 		DeviceCode:    req.DeviceCode,
 		Token:         tokenString,
 		TokenTypeCode: 'a',
-		ExpirationAt:  expirionAt,
+		ExpirationAt:  tokenClaims.ExpiresAt.Time,
 		IsRevoke:      false,
 	}); err != nil {
 		return nil, err
@@ -105,35 +103,30 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 }
 func (a *AuthService) CheckToken(ctx context.Context, req *pb.CheckTokenRequest) (*pb.CheckTokenResponse, error) {
 	//const op = "authService.CheckToken"
-	_, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
-		return a.secretKey, nil
-	})
+	_, err := jwttoken.GetToken(req.Token, a.secretKey)
 	if err != nil {
 		return nil, err
 	}
 	return &pb.CheckTokenResponse{Message: "success"}, nil
 
 }
-func (a *AuthService) Unregister(ctx context.Context, req *pb.UnregisterRequest) (*pb.UnregisterResponse, error) {
-	//const op = "authService.Unregister"
-	tokenJwt, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
-		return a.secretKey, nil
+func (a *AuthService) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*pb.ChangePasswordResponse, error) {
+	//const op = "authService.ChangePassword"
+	tokenClaims, err := jwttoken.GetClaims(req.Token, a.secretKey)
+	if err != nil {
+		return nil, err
+	}
+	hashNewPassword := secret.GetHash(req.NewPassword)
+
+	err = a.store.UpdateUser(&dto.UpdateUser{
+		UserId:   tokenClaims.Sub,
+		Password: &hashNewPassword,
 	})
 	if err != nil {
 		return nil, err
 	}
-	claims, ok := tokenJwt.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, servererrors.ErrorInvalidTokenClaims
-	}
-	userId, err := uuid.Parse(claims["sub"].(string))
-	if err != nil {
-		return nil, servererrors.ErrorInvalidTokenClaims
-	}
-	err = a.store.RemoveUser(&userId)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.UnregisterResponse{Message: "success"}, nil
+	return &pb.ChangePasswordResponse{
+		Message: "success",
+	}, nil
 
 }
