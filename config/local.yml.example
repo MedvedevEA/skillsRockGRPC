@@ -1,5 +1,8 @@
 env: "local" # local, dev, prod
-secretPath: ./../../secret/rsa
+token:
+  secretPath: ./secret/rsa
+  accessLifetime: 3600s
+  refreshLifetime: 2592000s
 api:
   addr: :50051
   writeTimeout: 15s

@@ -4,10 +4,10 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"skillsRockGRPC/internal/authservice"
 	"skillsRockGRPC/internal/config"
 	"skillsRockGRPC/internal/grpcserver"
 	"skillsRockGRPC/internal/logger"
-	"skillsRockGRPC/internal/service"
 	"skillsRockGRPC/internal/store"
 	"syscall"
 )
@@ -19,9 +19,9 @@ func main() {
 
 	store := store.MustNew(context.Background(), lg, &cfg.PostgreSQL)
 
-	service := service.MustNew(store, lg, cfg.SecretPath)
+	authService := authservice.MustNew(store, lg, &cfg.Token)
 
-	grpcServer := grpcserver.New(service, lg, &cfg.Api)
+	grpcServer := grpcserver.New(authService, lg, &cfg.Api)
 	go func() {
 		chQuit := make(chan os.Signal, 1)
 		signal.Notify(chQuit, syscall.SIGINT, syscall.SIGTERM)
