@@ -26,7 +26,7 @@ const (
 	AuthService_Login_FullMethodName          = "/auth.AuthService/Login"
 	AuthService_Logout_FullMethodName         = "/auth.AuthService/Logout"
 	AuthService_ChangePassword_FullMethodName = "/auth.AuthService/ChangePassword"
-	AuthService_ValidateToken_FullMethodName  = "/auth.AuthService/ValidateToken"
+	AuthService_TokenIsRevoke_FullMethodName  = "/auth.AuthService/TokenIsRevoke"
 	AuthService_RevokeToken_FullMethodName    = "/auth.AuthService/RevokeToken"
 	AuthService_RefreshToken_FullMethodName   = "/auth.AuthService/RefreshToken"
 )
@@ -40,7 +40,7 @@ type AuthServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 	ChangePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error)
-	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	TokenIsRevoke(ctx context.Context, in *TokenIsRevokeRequest, opts ...grpc.CallOption) (*TokenIsRevokeResponse, error)
 	RevokeToken(ctx context.Context, in *RevokeTokenRequest, opts ...grpc.CallOption) (*RevokeTokenResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 }
@@ -103,10 +103,10 @@ func (c *authServiceClient) ChangePassword(ctx context.Context, in *UpdatePasswo
 	return out, nil
 }
 
-func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error) {
+func (c *authServiceClient) TokenIsRevoke(ctx context.Context, in *TokenIsRevokeRequest, opts ...grpc.CallOption) (*TokenIsRevokeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ValidateTokenResponse)
-	err := c.cc.Invoke(ctx, AuthService_ValidateToken_FullMethodName, in, out, cOpts...)
+	out := new(TokenIsRevokeResponse)
+	err := c.cc.Invoke(ctx, AuthService_TokenIsRevoke_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ type AuthServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 	ChangePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error)
-	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	TokenIsRevoke(context.Context, *TokenIsRevokeRequest) (*TokenIsRevokeResponse, error)
 	RevokeToken(context.Context, *RevokeTokenRequest) (*RevokeTokenResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
@@ -170,8 +170,8 @@ func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*
 func (UnimplementedAuthServiceServer) ChangePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
 }
-func (UnimplementedAuthServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
+func (UnimplementedAuthServiceServer) TokenIsRevoke(context.Context, *TokenIsRevokeRequest) (*TokenIsRevokeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TokenIsRevoke not implemented")
 }
 func (UnimplementedAuthServiceServer) RevokeToken(context.Context, *RevokeTokenRequest) (*RevokeTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RevokeToken not implemented")
@@ -290,20 +290,20 @@ func _AuthService_ChangePassword_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_ValidateToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidateTokenRequest)
+func _AuthService_TokenIsRevoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TokenIsRevokeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).ValidateToken(ctx, in)
+		return srv.(AuthServiceServer).TokenIsRevoke(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_ValidateToken_FullMethodName,
+		FullMethod: AuthService_TokenIsRevoke_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ValidateToken(ctx, req.(*ValidateTokenRequest))
+		return srv.(AuthServiceServer).TokenIsRevoke(ctx, req.(*TokenIsRevokeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -372,8 +372,8 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_ChangePassword_Handler,
 		},
 		{
-			MethodName: "ValidateToken",
-			Handler:    _AuthService_ValidateToken_Handler,
+			MethodName: "TokenIsRevoke",
+			Handler:    _AuthService_TokenIsRevoke_Handler,
 		},
 		{
 			MethodName: "RevokeToken",

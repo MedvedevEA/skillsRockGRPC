@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net"
 
-	pb "skillsRockGRPC/gen/go/auth/v2"
+	pb "skillsRockGRPC/gen/go/auth/v3"
 	"skillsRockGRPC/internal/authservice"
 	"skillsRockGRPC/internal/config"
 

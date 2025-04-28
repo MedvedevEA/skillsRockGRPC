@@ -313,7 +313,7 @@ func (x *LoginResponse) GetRefreshToken() string {
 
 type LogoutRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Login         string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=userId,proto3" json:"userId,omitempty"`
 	DeviceCode    string                 `protobuf:"bytes,3,opt,name=deviceCode,proto3" json:"deviceCode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -349,9 +349,9 @@ func (*LogoutRequest) Descriptor() ([]byte, []int) {
 	return file_proto_auth_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *LogoutRequest) GetLogin() string {
+func (x *LogoutRequest) GetUserId() string {
 	if x != nil {
-		return x.Login
+		return x.UserId
 	}
 	return ""
 }
@@ -401,7 +401,7 @@ func (*LogoutResponse) Descriptor() ([]byte, []int) {
 
 type UpdatePasswordRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Login         string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=userId,proto3" json:"userId,omitempty"`
 	NewPassword   string                 `protobuf:"bytes,2,opt,name=newPassword,proto3" json:"newPassword,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -437,9 +437,9 @@ func (*UpdatePasswordRequest) Descriptor() ([]byte, []int) {
 	return file_proto_auth_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *UpdatePasswordRequest) GetLogin() string {
+func (x *UpdatePasswordRequest) GetUserId() string {
 	if x != nil {
-		return x.Login
+		return x.UserId
 	}
 	return ""
 }
@@ -487,27 +487,27 @@ func (*UpdatePasswordResponse) Descriptor() ([]byte, []int) {
 	return file_proto_auth_proto_rawDescGZIP(), []int{9}
 }
 
-type ValidateTokenRequest struct {
+type TokenIsRevokeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TokenId       string                 `protobuf:"bytes,1,opt,name=tokenId,proto3" json:"tokenId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ValidateTokenRequest) Reset() {
-	*x = ValidateTokenRequest{}
+func (x *TokenIsRevokeRequest) Reset() {
+	*x = TokenIsRevokeRequest{}
 	mi := &file_proto_auth_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ValidateTokenRequest) String() string {
+func (x *TokenIsRevokeRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ValidateTokenRequest) ProtoMessage() {}
+func (*TokenIsRevokeRequest) ProtoMessage() {}
 
-func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
+func (x *TokenIsRevokeRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_auth_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -519,38 +519,39 @@ func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ValidateTokenRequest.ProtoReflect.Descriptor instead.
-func (*ValidateTokenRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use TokenIsRevokeRequest.ProtoReflect.Descriptor instead.
+func (*TokenIsRevokeRequest) Descriptor() ([]byte, []int) {
 	return file_proto_auth_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *ValidateTokenRequest) GetTokenId() string {
+func (x *TokenIsRevokeRequest) GetTokenId() string {
 	if x != nil {
 		return x.TokenId
 	}
 	return ""
 }
 
-type ValidateTokenResponse struct {
+type TokenIsRevokeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	IsRevoke      bool                   `protobuf:"varint,1,opt,name=IsRevoke,proto3" json:"IsRevoke,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ValidateTokenResponse) Reset() {
-	*x = ValidateTokenResponse{}
+func (x *TokenIsRevokeResponse) Reset() {
+	*x = TokenIsRevokeResponse{}
 	mi := &file_proto_auth_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ValidateTokenResponse) String() string {
+func (x *TokenIsRevokeResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ValidateTokenResponse) ProtoMessage() {}
+func (*TokenIsRevokeResponse) ProtoMessage() {}
 
-func (x *ValidateTokenResponse) ProtoReflect() protoreflect.Message {
+func (x *TokenIsRevokeResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_auth_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -562,9 +563,16 @@ func (x *ValidateTokenResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ValidateTokenResponse.ProtoReflect.Descriptor instead.
-func (*ValidateTokenResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use TokenIsRevokeResponse.ProtoReflect.Descriptor instead.
+func (*TokenIsRevokeResponse) Descriptor() ([]byte, []int) {
 	return file_proto_auth_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *TokenIsRevokeResponse) GetIsRevoke() bool {
+	if x != nil {
+		return x.IsRevoke
+	}
+	return false
 }
 
 type RevokeTokenRequest struct {
@@ -764,20 +772,21 @@ const file_proto_auth_proto_rawDesc = "" +
 	"deviceCode\"U\n" +
 	"\rLoginResponse\x12 \n" +
 	"\vaccessToken\x18\x01 \x01(\tR\vaccessToken\x12\"\n" +
-	"\frefreshToken\x18\x02 \x01(\tR\frefreshToken\"E\n" +
-	"\rLogoutRequest\x12\x14\n" +
-	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1e\n" +
+	"\frefreshToken\x18\x02 \x01(\tR\frefreshToken\"G\n" +
+	"\rLogoutRequest\x12\x16\n" +
+	"\x06userId\x18\x01 \x01(\tR\x06userId\x12\x1e\n" +
 	"\n" +
 	"deviceCode\x18\x03 \x01(\tR\n" +
 	"deviceCode\"\x10\n" +
-	"\x0eLogoutResponse\"O\n" +
-	"\x15UpdatePasswordRequest\x12\x14\n" +
-	"\x05login\x18\x01 \x01(\tR\x05login\x12 \n" +
+	"\x0eLogoutResponse\"Q\n" +
+	"\x15UpdatePasswordRequest\x12\x16\n" +
+	"\x06userId\x18\x01 \x01(\tR\x06userId\x12 \n" +
 	"\vnewPassword\x18\x02 \x01(\tR\vnewPassword\"\x18\n" +
 	"\x16UpdatePasswordResponse\"0\n" +
-	"\x14ValidateTokenRequest\x12\x18\n" +
-	"\atokenId\x18\x01 \x01(\tR\atokenId\"\x17\n" +
-	"\x15ValidateTokenResponse\".\n" +
+	"\x14TokenIsRevokeRequest\x12\x18\n" +
+	"\atokenId\x18\x01 \x01(\tR\atokenId\"3\n" +
+	"\x15TokenIsRevokeResponse\x12\x1a\n" +
+	"\bIsRevoke\x18\x01 \x01(\bR\bIsRevoke\".\n" +
 	"\x12RevokeTokenRequest\x12\x18\n" +
 	"\atokenId\x18\x01 \x01(\tR\atokenId\"\x15\n" +
 	"\x13RevokeTokenResponse\"/\n" +
@@ -793,7 +802,7 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x123\n" +
 	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponse\x12K\n" +
 	"\x0eChangePassword\x12\x1b.auth.UpdatePasswordRequest\x1a\x1c.auth.UpdatePasswordResponse\x12H\n" +
-	"\rValidateToken\x12\x1a.auth.ValidateTokenRequest\x1a\x1b.auth.ValidateTokenResponse\x12B\n" +
+	"\rTokenIsRevoke\x12\x1a.auth.TokenIsRevokeRequest\x1a\x1b.auth.TokenIsRevokeResponse\x12B\n" +
 	"\vRevokeToken\x12\x18.auth.RevokeTokenRequest\x1a\x19.auth.RevokeTokenResponse\x12E\n" +
 	"\fRefreshToken\x12\x19.auth.RefreshTokenRequest\x1a\x1a.auth.RefreshTokenResponseB\x0eZ\fauth/v3;authb\x06proto3"
 
@@ -821,8 +830,8 @@ var file_proto_auth_proto_goTypes = []any{
 	(*LogoutResponse)(nil),         // 7: auth.LogoutResponse
 	(*UpdatePasswordRequest)(nil),  // 8: auth.UpdatePasswordRequest
 	(*UpdatePasswordResponse)(nil), // 9: auth.UpdatePasswordResponse
-	(*ValidateTokenRequest)(nil),   // 10: auth.ValidateTokenRequest
-	(*ValidateTokenResponse)(nil),  // 11: auth.ValidateTokenResponse
+	(*TokenIsRevokeRequest)(nil),   // 10: auth.TokenIsRevokeRequest
+	(*TokenIsRevokeResponse)(nil),  // 11: auth.TokenIsRevokeResponse
 	(*RevokeTokenRequest)(nil),     // 12: auth.RevokeTokenRequest
 	(*RevokeTokenResponse)(nil),    // 13: auth.RevokeTokenResponse
 	(*RefreshTokenRequest)(nil),    // 14: auth.RefreshTokenRequest
@@ -834,7 +843,7 @@ var file_proto_auth_proto_depIdxs = []int32{
 	4,  // 2: auth.AuthService.Login:input_type -> auth.LoginRequest
 	6,  // 3: auth.AuthService.Logout:input_type -> auth.LogoutRequest
 	8,  // 4: auth.AuthService.ChangePassword:input_type -> auth.UpdatePasswordRequest
-	10, // 5: auth.AuthService.ValidateToken:input_type -> auth.ValidateTokenRequest
+	10, // 5: auth.AuthService.TokenIsRevoke:input_type -> auth.TokenIsRevokeRequest
 	12, // 6: auth.AuthService.RevokeToken:input_type -> auth.RevokeTokenRequest
 	14, // 7: auth.AuthService.RefreshToken:input_type -> auth.RefreshTokenRequest
 	1,  // 8: auth.AuthService.Register:output_type -> auth.RegisterResponse
@@ -842,7 +851,7 @@ var file_proto_auth_proto_depIdxs = []int32{
 	5,  // 10: auth.AuthService.Login:output_type -> auth.LoginResponse
 	7,  // 11: auth.AuthService.Logout:output_type -> auth.LogoutResponse
 	9,  // 12: auth.AuthService.ChangePassword:output_type -> auth.UpdatePasswordResponse
-	11, // 13: auth.AuthService.ValidateToken:output_type -> auth.ValidateTokenResponse
+	11, // 13: auth.AuthService.TokenIsRevoke:output_type -> auth.TokenIsRevokeResponse
 	13, // 14: auth.AuthService.RevokeToken:output_type -> auth.RevokeTokenResponse
 	15, // 15: auth.AuthService.RefreshToken:output_type -> auth.RefreshTokenResponse
 	8,  // [8:16] is the sub-list for method output_type

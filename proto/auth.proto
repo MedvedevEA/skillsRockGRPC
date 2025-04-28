@@ -12,7 +12,7 @@ service AuthService {
     rpc Logout(LogoutRequest) returns (LogoutResponse);
     rpc ChangePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
 
-    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+    rpc TokenIsRevoke(TokenIsRevokeRequest) returns (TokenIsRevokeResponse);
     rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
     rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
 }
@@ -40,22 +40,23 @@ message LoginResponse {
     string refreshToken=2;
 }
 message LogoutRequest {
-    string login=1;
+    string userId=1;
     string deviceCode=3;
 }
 message LogoutResponse {
 }
 message UpdatePasswordRequest {
-    string login=1;
+    string userId=1;
     string newPassword=2;
 }
 message UpdatePasswordResponse {
 }
 
-message ValidateTokenRequest {
+message TokenIsRevokeRequest {
     string tokenId=1;
 }
-message ValidateTokenResponse {
+message TokenIsRevokeResponse {
+    bool IsRevoke=1;
 }
 message RevokeTokenRequest {
     string tokenId=1;
