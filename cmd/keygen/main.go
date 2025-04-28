@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
-	"skillsRockGRPC/pkg/secret"
+	"skillsRockGRPC/pkg/secure"
 )
 
 // Генерация и сохранение в файл пары ключей
@@ -20,7 +20,7 @@ func main() {
 	flag.StringVar(&typePrivateKey, "typeprivatekey", "RSA PRIVATE KEY", "type private key")
 	flag.Parse()
 
-	privateKey, publicKey, err := secret.GenerateKey(keySize)
+	privateKey, publicKey, err := secure.GenerateKey(keySize)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer privateFile.Close()
-	_, err = privateFile.Write(secret.MarshalRSAPrivate(privateKey, typePrivateKey))
+	_, err = privateFile.Write(secure.MarshalRSAPrivate(privateKey, typePrivateKey))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = publicFile.Write(secret.MarshalRSAPublic(publicKey))
+	_, err = publicFile.Write(secure.MarshalRSAPublic(publicKey))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -23,6 +23,9 @@ const (
 		INSERT INTO "user" (login,password,email) VALUES ($1, $2, $3) RETURNING user_id;
 	`
 	getUserQuery = `
+		SELECT * FROM "user" WHERE user_id=$1;
+	`
+	getUserByLoginQuery = `
 		SELECT * FROM "user" WHERE login=$1;
 	`
 	updateUserQuery = `
@@ -36,30 +39,25 @@ const (
 	removeUserQuery = `
 		DELETE FROM "user" WHERE user_id=$1 RETURNING user_id;
 	`
-	removeUserByLoginQuery = `
-		DELETE FROM "user" WHERE login=$1 RETURNING user_id;
-	`
-	getRoleIdsByUserIdQuery = `
-		SELECT _r.name FROM role _r
-		JOIN user_role _ur
-		ON _r.role_id=_ur.role_id
-		WHERE _ur.user_id=$1;
+
+	getUserRolesByUserIdQuery = `
+		SELECT role_id FROM user_role WHERE user_id=$1;
 	`
 
-	addTokenWithIdQuery = `
+	addTokenWithTokenIdQuery = `
 		INSERT INTO "token" VALUES ($1,$2,$3,$4,$5,$6,$7);
 	`
 	getTokenQuery = `
 		SELECT * FROM "token" WHERE token_id=$1;
 	`
-	UpdateTokenRevokeByTokenIdQuery = `
-		UPDATE "token" SET is_valid=false WHERE token_id=$1 RETURNING token_id;
+	updateTokenRevokeByTokenIdQuery = `
+		UPDATE "token" SET is_revoked=true WHERE token_id=$1 RETURNING token_id;
 	`
-	UpdateTokenRevokeByUserId = `
-		UPDATE "token" SET is_valid=false WHERE user_id=$1;
+	updateTokensRevokeByUserIdAndDevceCodeQuery = `
+		UPDATE "token" SET is_revoked=true WHERE user_id=$1 AND ($2::character varying IS NULL OR device_code=$2);
 	`
-	removeTokenByUserIdAndDeviceCodeQuery = `
-		DELETE FROM "token" WHERE user_id=$1 AND device_code=$2;
+	removeTokensByUserIdAndDeviceCodeQuery = `
+		DELETE FROM "token" WHERE user_id=$1 AND ($2::character varying IS NULL OR device_code=$2);
 	`
 )
 
@@ -108,7 +106,6 @@ func (s *Store) AddUser(dto *dto.AddUser) (*uuid.UUID, error) {
 	const op = "store.AddUser"
 	userId := new(uuid.UUID)
 	err := s.pool.QueryRow(context.Background(), addUserQuery, dto.Login, dto.Password, dto.Email).Scan(userId)
-
 	if err != nil {
 		if pgError, ok := err.(*pgconn.PgError); ok && pgError.Code == "23505" {
 			return nil, errors.Wrap(repository.ErrUniqueViolation, op)
@@ -119,10 +116,22 @@ func (s *Store) AddUser(dto *dto.AddUser) (*uuid.UUID, error) {
 	}
 	return userId, nil
 }
+func (s *Store) GetUser(userId *uuid.UUID) (*entity.User, error) {
+	const op = "store.GetUser"
+	user := new(entity.User)
+	err := s.pool.QueryRow(context.Background(), getUserQuery, userId).Scan(&user.UserId, &user.Login, &user.Password, &user.Email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.Wrap(repository.ErrRecordNotFound, op)
+		}
+		return nil, errors.Wrap(repository.ErrInternalServerError, op)
+	}
+	return user, err
+}
 func (s *Store) GetUserByLogin(login string) (*entity.User, error) {
 	const op = "store.GetUserByLogin"
 	user := new(entity.User)
-	err := s.pool.QueryRow(context.Background(), getUserQuery, login).Scan(&user.UserId, &user.Login, &user.Password, &user.Email)
+	err := s.pool.QueryRow(context.Background(), getUserByLoginQuery, login).Scan(&user.UserId, &user.Login, &user.Password, &user.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.Wrap(repository.ErrRecordNotFound, op)
@@ -154,21 +163,9 @@ func (s *Store) RemoveUser(userId *uuid.UUID) error {
 	}
 	return nil
 }
-func (s *Store) RemoveUserByLogin(login string) error {
-	const op = "store.RemoveUserByLogin"
-	userId := new(uuid.UUID)
-	err := s.pool.QueryRow(context.Background(), removeUserQuery, login).Scan(userId)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return errors.Wrap(repository.ErrRecordNotFound, op)
-		}
-		return errors.Wrap(repository.ErrInternalServerError, op)
-	}
-	return nil
-}
-func (s *Store) GetRoleIdsByUserId(userId *uuid.UUID) ([]*uuid.UUID, error) {
-	const op = "store.GetRoleIdsByUserId"
-	rows, err := s.pool.Query(context.Background(), getRoleIdsByUserIdQuery, userId)
+func (s *Store) GetUserRolesByUserId(userId *uuid.UUID) ([]*uuid.UUID, error) {
+	const op = "store.GetUserRolesByUserId"
+	rows, err := s.pool.Query(context.Background(), getUserRolesByUserIdQuery, userId)
 	if err != nil {
 		return nil, errors.Wrap(repository.ErrInternalServerError, op)
 	}
@@ -176,19 +173,19 @@ func (s *Store) GetRoleIdsByUserId(userId *uuid.UUID) ([]*uuid.UUID, error) {
 
 	roleIds := []*uuid.UUID{}
 	for rows.Next() {
-		var roleId uuid.UUID
-		err := rows.Scan(&roleId)
+		roleId := new(uuid.UUID)
+		err := rows.Scan(roleId)
 		if err != nil {
 			return nil, errors.Wrap(repository.ErrInternalServerError, op)
 		}
-		roleIds = append(roleIds, &roleId)
+		roleIds = append(roleIds, roleId)
 	}
 	return roleIds, nil
 }
 
-func (s *Store) AddTokenWithId(dto *dto.AddTokenWithId) error {
-	const op = "store.AddTokenWithId"
-	_, err := s.pool.Exec(context.Background(), addTokenWithIdQuery, dto.TokenId, dto.UserId, dto.DeviceCode, dto.Token, dto.TokenTypeCode, dto.ExpirationAt, dto.IsRevoke)
+func (s *Store) AddTokenWithTokenId(dto *dto.AddTokenWithTokenId) error {
+	const op = "store.AddTokenWithTokenId"
+	_, err := s.pool.Exec(context.Background(), addTokenWithTokenIdQuery, dto.TokenId, dto.UserId, dto.DeviceCode, dto.Token, dto.TokenTypeCode, dto.ExpirationAt, dto.IsRevoke)
 	if err != nil {
 		return errors.Wrap(repository.ErrInternalServerError, op)
 	}
@@ -208,7 +205,7 @@ func (s *Store) GetToken(tokenId *uuid.UUID) (*entity.Token, error) {
 }
 func (s *Store) UpdateTokenRevokeByTokenId(tokenId *uuid.UUID) error {
 	const op = "store.UpdateTokenRevokeByTokenId"
-	if err := s.pool.QueryRow(context.Background(), UpdateTokenRevokeByTokenIdQuery, tokenId).Scan(tokenId); err != nil {
+	if err := s.pool.QueryRow(context.Background(), updateTokenRevokeByTokenIdQuery, tokenId).Scan(tokenId); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.Wrap(repository.ErrRecordNotFound, op)
 		}
@@ -216,17 +213,17 @@ func (s *Store) UpdateTokenRevokeByTokenId(tokenId *uuid.UUID) error {
 	}
 	return nil
 }
-func (s *Store) UpdateTokensRevokeByUserId(userId *uuid.UUID) error {
-	const op = "store.UpdateTokenRevokeByUserId"
-	_, err := s.pool.Exec(context.Background(), UpdateTokenRevokeByUserId, userId)
+func (s *Store) UpdateTokensRevokeByUserIdAndDeviceCode(dto *dto.UpdateTokensRevokeByUserIdAndDeviceCode) error {
+	const op = "store.UpdateTokensRevokeByUserIdAndDeviceCode"
+	_, err := s.pool.Exec(context.Background(), updateTokensRevokeByUserIdAndDevceCodeQuery, dto.UserId, dto.DeviceCode)
 	if err != nil {
 		return errors.Wrap(repository.ErrInternalServerError, op)
 	}
 	return nil
 }
 func (s *Store) RemoveTokensByUserIdAndDeviceCode(dto *dto.RemoveTokensByUserIdAndDeviceCode) error {
-	const op = "store.RemoveTokenByUserIdAndDeviceCode"
-	_, err := s.pool.Exec(context.Background(), removeTokenByUserIdAndDeviceCodeQuery, dto.UserId, dto.DeviceCode)
+	const op = "store.RemoveTokensByUserIdAndDeviceCode"
+	_, err := s.pool.Exec(context.Background(), removeTokensByUserIdAndDeviceCodeQuery, dto.UserId, dto.DeviceCode)
 	if err != nil {
 		return errors.Wrap(repository.ErrInternalServerError, op)
 	}

@@ -20,7 +20,7 @@ type Role struct {
 type Token struct {
 	TokenId       *uuid.UUID `json:"token_id" db:"token_id"`
 	UserId        *uuid.UUID `json:"user_id" db:"user_id"`
-	DeviceCode    *uuid.UUID `json:"device_code" db:"device_code"`
+	DeviceCode    string     `json:"device_code" db:"device_code"`
 	Token         string     `json:"token" db:"token"`
 	TokenTypeCode rune       `json:"token_type_code" db:"token_type_code"`
 	ExpirationAt  time.Time  `json:"expiration_at" db:"expiration_at"`

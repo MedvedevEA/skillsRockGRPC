@@ -10,7 +10,7 @@ service AuthService {
     rpc Unregister (UnregisterRequest) returns (UnregisterResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc Logout(LogoutRequest) returns (LogoutResponse);
-    rpc ChangePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
+    rpc UpdatePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
 
     rpc TokenIsRevoke(TokenIsRevokeRequest) returns (TokenIsRevokeResponse);
     rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
@@ -25,7 +25,7 @@ message RegisterRequest {
 message RegisterResponse {
 }
 message UnregisterRequest {
-    string login=1;
+    string userId=1;
 }
 message UnregisterResponse {   
 }
