@@ -1,6 +1,25 @@
 package servererrors
 
-import "errors"
+import (
+	"errors"
+)
+
+type SrvError struct {
+	message string
+	op      string
+	err     error
+}
+
+func New(message string, op string, err error) SrvError {
+	return SrvError{
+		message,
+		op,
+		err,
+	}
+}
+func (s *SrvError) Error() string {
+	return s.message
+}
 
 var (
 	ErrorRecordNotFound      = errors.New("record not found")

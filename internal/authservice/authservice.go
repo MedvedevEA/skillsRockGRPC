@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type AuthService struct {
@@ -56,7 +58,7 @@ func (a *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 		Email:    req.Email,
 	})
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &pb.RegisterResponse{Message: "success"}, nil
 }
@@ -177,6 +179,7 @@ func (a *AuthService) ChangePassword(ctx context.Context, req *pb.ChangePassword
 	return &pb.ChangePasswordResponse{
 		Message: "success",
 	}, nil
+
 }
 func (a *AuthService) RevokeToken(ctx context.Context, req *pb.RevokeTokenRequest) (*pb.RevokeTokenResponse, error) {
 	//const op = "authService.RevokeToken"
@@ -184,7 +187,6 @@ func (a *AuthService) RevokeToken(ctx context.Context, req *pb.RevokeTokenReques
 	if err != nil {
 		return nil, err
 	}
-
 	err = a.store.UpdateTokenRevokeByUserIdAndDeviceCode(&dto.UpdateTokenRevokeByUserIdAndDeviceCode{
 		UserId:     tokenClaims.Sub,
 		DeviceCode: tokenClaims.DeviceCode,

@@ -3,32 +3,31 @@ syntax="proto3";
 
 package auth;
 
-option go_package = "auth/v2;auth";
+option go_package = "auth/v3;auth";
 
 service AuthService {
     rpc Register (RegisterRequest) returns (RegisterResponse);
     rpc Unregister (UnregisterRequest) returns (UnregisterResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc Logout(LogoutRequest) returns (LogoutResponse);
-    rpc CheckToken(CheckTokenRequest) returns (CheckTokenResponse);
-    rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
-    rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
-    
+    rpc ChangePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
 
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+    rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
+    rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
 }
+
 message RegisterRequest {
     string login=1;
     string password=2;
     string email=3;
 }
 message RegisterResponse {
-    string message=1;
 }
 message UnregisterRequest {
-    string token=1;
+    string login=1;
 }
-message UnregisterResponse {
-    string message=1;
+message UnregisterResponse {   
 }
 
 message LoginRequest {
@@ -40,30 +39,33 @@ message LoginResponse {
     string accessToken=1;
     string refreshToken=2;
 }
-
 message LogoutRequest {
-    string token=1;
+    string login=1;
+    string deviceCode=3;
 }
 message LogoutResponse {
-    string message=1;
 }
-
-message CheckTokenRequest {
-    string token=1;
-}
-message CheckTokenResponse {
-    string message=1; 
-}
-message RevokeTokenRequest {
-    string token=1;
-}
-message RevokeTokenResponse {
-    string message=1;
-}
-message ChangePasswordRequest {
-    string token=1;
+message UpdatePasswordRequest {
+    string login=1;
     string newPassword=2;
 }
-message ChangePasswordResponse {
-    string message=1; 
+message UpdatePasswordResponse {
+}
+
+message ValidateTokenRequest {
+    string tokenId=1;
+}
+message ValidateTokenResponse {
+}
+message RevokeTokenRequest {
+    string tokenId=1;
+}
+message RevokeTokenResponse {
+}
+message RefreshTokenRequest {
+    string tokenId=1;
+}
+message RefreshTokenResponse {
+    string accessToken=1;
+    string refreshToken=2;
 }

@@ -60,7 +60,7 @@ const (
 	addUserQuery    = `INSERT INTO "user" (login,password,email) VALUES ($1, $2, $3) RETURNING user_id`
 	getUserQuery    = `SELECT * FROM "user" WHERE login=$1`
 	updateUserQuery = `
-	UPDATE "user" SET 
+	UPDATE "user" SET 1
 	login = CASE WHEN $2::character varying IS NULL THEN login ELSE $2 END,
 	password = CASE WHEN $3::character varying IS NULL THEN password ELSE $3 END,
 	email = CASE WHEN $4::character varying IS NULL THEN email ELSE $4 END
@@ -84,7 +84,8 @@ func (s *Store) AddUser(dto *dto.AddUser) (*uuid.UUID, error) {
 	err := s.pool.QueryRow(context.Background(), addUserQuery, dto.Login, dto.Password, dto.Email).Scan(userId)
 
 	if err != nil {
-		if pgError, ok := err.(*pgconn.PgError); ok && pgError.Code == "23505" {
+		var pgError *pgconn.PgError
+		if errors.As(err, &pgError) && pgError.Code == "23505" {
 			s.lg.Error("failed to add user", slog.String("op", op), slog.Any("error", err))
 			return nil, servererrors.ErrorLoginAlreadyExists
 		}
@@ -108,6 +109,7 @@ func (s *Store) GetUserByLogin(login string) (*entity.User, error) {
 	return user, err
 }
 func (s *Store) UpdateUser(dto *dto.UpdateUser) error {
+
 	const op = "store.UpdateUser"
 	userId := new(uuid.UUID)
 	err := s.pool.QueryRow(context.Background(), updateUserQuery, dto.UserId, dto.Login, dto.Password, dto.Email).Scan(userId)
@@ -120,6 +122,7 @@ func (s *Store) UpdateUser(dto *dto.UpdateUser) error {
 		return servererrors.ErrorInternalServerError
 	}
 	return nil
+
 }
 
 func (s *Store) RemoveUser(userId *uuid.UUID) error {
