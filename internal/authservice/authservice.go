@@ -29,7 +29,7 @@ type AuthService struct {
 
 func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *AuthService {
 	const op = "authservice.MustNew"
-	secretByteArray, err := os.ReadFile(cfg.SecretPath)
+	secretByteArray, err := os.ReadFile(cfg.KeyPath)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, op))
 	}

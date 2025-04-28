@@ -17,7 +17,7 @@ type Config struct {
 	PostgreSQL PostgreSQL `yaml:"postgreSql"`
 }
 type Token struct {
-	SecretPath      string        `yaml:"secretPath" env:"AUTH_TOKEN_SECRET_PATH" env-required:"true"`
+	KeyPath         string        `yaml:"keyPath" env:"AUTH_TOKEN_KEY_PATH" env-required:"true"`
 	AccessLifetime  time.Duration `yaml:"accessLifetime" env:"AUTH_TOKEN_ACCEESS_LIFETIME" env-default:"3600s"`
 	RefreshLifetime time.Duration `yaml:"refreshLifetime" env:"AUTH_TOKEN_REFRESH_LIFETIME" env-default:"2592000s"`
 }
