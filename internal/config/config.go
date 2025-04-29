@@ -17,7 +17,7 @@ type Config struct {
 	PostgreSQL PostgreSQL `yaml:"postgreSql"`
 }
 type Token struct {
-	SecretPath      string        `yaml:"secretPath" env:"AUTH_TOKEN_SECRET_PATH" env-required:"true"`
+	KeyPath         string        `yaml:"keyPath" env:"AUTH_TOKEN_KEY_PATH" env-required:"true"`
 	AccessLifetime  time.Duration `yaml:"accessLifetime" env:"AUTH_TOKEN_ACCEESS_LIFETIME" env-default:"3600s"`
 	RefreshLifetime time.Duration `yaml:"refreshLifetime" env:"AUTH_TOKEN_REFRESH_LIFETIME" env-default:"2592000s"`
 }
@@ -48,7 +48,7 @@ func MustLoad() *Config {
 
 	flag.StringVar(&configPath, "config", "", "path to config file")
 	flag.Parse()
-	configPath = "./../../config/local.yml" //for debug
+	//configPath = "./../../config/local.yml" //for debug
 	if configPath != "" {
 		log.Printf("%s: the value of the 'config' flag: %s\n", op, configPath)
 		if err := cleanenv.ReadConfig(configPath, cfg); err != nil {

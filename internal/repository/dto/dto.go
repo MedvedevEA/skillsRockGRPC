@@ -18,7 +18,7 @@ type UpdateUser struct {
 	Email    *string
 }
 
-type AddTokenWithId struct {
+type AddTokenWithTokenId struct {
 	TokenId       *uuid.UUID
 	UserId        *uuid.UUID
 	DeviceCode    string
@@ -27,11 +27,11 @@ type AddTokenWithId struct {
 	ExpirationAt  time.Time
 	IsRevoke      bool
 }
-type UpdateTokenRevokeByUserIdAndDeviceCode struct {
+type UpdateTokensRevokeByUserIdAndDeviceCode struct {
 	UserId     *uuid.UUID
-	DeviceCode string
+	DeviceCode *string
 }
-type RemoveTokenByUserIdAndDeviceCode struct {
+type RemoveTokensByUserIdAndDeviceCode struct {
 	UserId     *uuid.UUID
-	DeviceCode string
+	DeviceCode *string
 }

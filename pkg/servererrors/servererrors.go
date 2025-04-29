@@ -3,13 +3,16 @@ package servererrors
 import "errors"
 
 var (
-	ErrorRecordNotFound      = errors.New("record not found")
-	ErrorInternalServerError = errors.New("internal server error")
+	ErrInternalServerError = errors.New("internal server error")
 
-	ErrorInvalidLoginOrPassword = errors.New("invalid login or password")
-	ErrorLoginAlreadyExists     = errors.New("login already exists")
+	ErrInvalidLoginOrPassword    = errors.New("invalid login or password")
+	ErrLoginAlreadyExists        = errors.New("login already exists")
+	ErrInvalidArgumentUserId     = errors.New("invalid user id value")
+	ErrInvalidArgumentTokenId    = errors.New("invalid token id value")
+	ErrInvalidArgumentDeviceCode = errors.New("invalid device code value")
+	ErrTokenRevoked              = errors.New("token is revoke")
+	ErrInvalidTokenType          = errors.New("invalid token type")
 
-	ErrorInvalidTokenSignature = errors.New("token signature is invalid")
-	ErrorTokenExpired          = errors.New("token is either expired or not active yet")
-	ErrorTokenMalformed        = errors.New("token malformed")
+	ErrUserNotFound  = errors.New("user not found")
+	ErrTokenNotFound = errors.New("token not found")
 )
