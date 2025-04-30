@@ -1,6 +1,6 @@
 env: "local" # local, dev, prod
 token:
-  keyPath: ./key/rsa
+  keyPath: ./cert/private.pem
   accessLifetime: 3600s
   refreshLifetime: 2592000s
 api:

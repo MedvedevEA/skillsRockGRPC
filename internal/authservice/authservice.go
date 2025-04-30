@@ -2,6 +2,7 @@ package authservice
 
 import (
 	"context"
+	"encoding/pem"
 	"log"
 	"log/slog"
 	"os"
@@ -32,16 +33,19 @@ type AuthService struct {
 
 func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *AuthService {
 	const op = "authservice.MustNew"
-	keyByteArray, err := os.ReadFile(cfg.KeyPath)
+	privateKeyBytes, err := os.ReadFile(cfg.KeyPath)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, op))
 	}
-	keyRSA, err := secure.UnmarshalRSAPrivate(keyByteArray)
-	if err != nil {
-		log.Fatal(errors.Wrap(err, op))
-	}
-	key := secure.MarshalRSAPrivate(keyRSA, "")
 
+	block, _ := pem.Decode(privateKeyBytes)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		log.Fatal(errors.Wrap(err, op))
+	}
+	key := pem.EncodeToMemory(block)
+	if key == nil {
+		log.Fatal(errors.Errorf("%s: pem encoding error", op))
+	}
 	return &AuthService{
 		store:           store,
 		key:             key,
