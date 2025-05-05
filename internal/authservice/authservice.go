@@ -2,11 +2,10 @@ package authservice
 
 import (
 	"context"
-	"encoding/pem"
+	"crypto/rsa"
 	"log"
 	"log/slog"
-	"os"
-	pb "skillsRockGRPC/gen/go/auth/v3"
+	pb "skillsRockGRPC/grpc/genproto"
 	"skillsRockGRPC/internal/config"
 	"skillsRockGRPC/internal/repository"
 	"skillsRockGRPC/internal/repository/dto"
@@ -25,7 +24,7 @@ import (
 type AuthService struct {
 	pb.UnimplementedAuthServiceServer
 	store           repository.Repository
-	key             []byte
+	privateKey      *rsa.PrivateKey
 	accessLifetime  time.Duration
 	refrashLifetime time.Duration
 	lg              *slog.Logger
@@ -33,22 +32,14 @@ type AuthService struct {
 
 func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *AuthService {
 	const op = "authservice.MustNew"
-	privateKeyBytes, err := os.ReadFile(cfg.KeyPath)
+	privateKey, err := secure.LoadPrivateKey(cfg.PrivateKeyPath)
 	if err != nil {
-		log.Fatal(errors.Wrap(err, op))
+		log.Fatalf("%s: %v", op, err)
 	}
 
-	block, _ := pem.Decode(privateKeyBytes)
-	if block == nil || block.Type != "RSA PRIVATE KEY" {
-		log.Fatal(errors.Wrap(err, op))
-	}
-	key := pem.EncodeToMemory(block)
-	if key == nil {
-		log.Fatal(errors.Errorf("%s: pem encoding error", op))
-	}
 	return &AuthService{
 		store:           store,
-		key:             key,
+		privateKey:      privateKey,
 		accessLifetime:  cfg.AccessLifetime,
 		refrashLifetime: cfg.RefreshLifetime,
 		lg:              lg,
@@ -57,17 +48,17 @@ func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *A
 
 func (a *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	//const op = "authService.Register"
-	if _, err := a.store.AddUser(&dto.AddUser{
+	userId, err := a.store.AddUser(&dto.AddUser{
 		Login:    req.Login,
 		Password: secure.GetHash(req.Password),
-		Email:    req.Email,
-	}); err != nil {
+	})
+	if err != nil {
 		if errors.Is(err, repository.ErrUniqueViolation) {
 			return nil, status.Error(codes.AlreadyExists, servererrors.ErrLoginAlreadyExists.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.RegisterResponse{}, nil
+	return &pb.RegisterResponse{UserId: userId.String()}, nil
 }
 func (a *AuthService) Unregister(ctx context.Context, req *pb.UnregisterRequest) (*pb.UnregisterResponse, error) {
 	const op = "authService.Unregister"
@@ -81,8 +72,6 @@ func (a *AuthService) Unregister(ctx context.Context, req *pb.UnregisterRequest)
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	//Для таблиц user и token установлено правило каскадного удаления записей - при удалении пользователя, удаляются все его токены
-
 	return &pb.UnregisterResponse{}, nil
 
 }
@@ -91,7 +80,6 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 	if req.DeviceCode == "" {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentDeviceCode, op).Error())
 	}
-
 	user, err := a.store.GetUserByLogin(req.Login)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecordNotFound) {
@@ -103,45 +91,28 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		err := status.Error(codes.Unauthenticated, servererrors.ErrInvalidLoginOrPassword.Error())
 		return nil, err
 	}
-	roleIds, err := a.store.GetUserRolesByUserId(user.UserId)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if err := a.store.RemoveTokensByUserIdAndDeviceCode(&dto.RemoveTokensByUserIdAndDeviceCode{
+	if err := a.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
 		UserId:     user.UserId,
 		DeviceCode: &req.DeviceCode,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	//access token
-	accessTokenString, accessTokenClaims, err := jwt.CreateToken(user.UserId, req.DeviceCode, roleIds, a.accessLifetime, a.key)
+	accessTokenString, _, err := jwt.CreateToken(user.UserId, req.DeviceCode, "access", a.accessLifetime, a.privateKey)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if err := a.store.AddTokenWithTokenId(&dto.AddTokenWithTokenId{
-		TokenId:       accessTokenClaims.Jti,
-		UserId:        accessTokenClaims.Sub,
-		DeviceCode:    accessTokenClaims.DeviceCode,
-		Token:         accessTokenString,
-		TokenTypeCode: 'a',
-		ExpirationAt:  accessTokenClaims.ExpiresAt.Time,
-		IsRevoke:      false,
-	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	//refresh token
-	refreshTokenString, refreshTokenClaims, err := jwt.CreateToken(user.UserId, req.DeviceCode, roleIds, a.refrashLifetime, a.key)
+	refreshTokenString, refreshTokenClaims, err := jwt.CreateToken(user.UserId, req.DeviceCode, "refresh", a.refrashLifetime, a.privateKey)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := a.store.AddTokenWithTokenId(&dto.AddTokenWithTokenId{
-		TokenId:       refreshTokenClaims.Jti,
-		UserId:        refreshTokenClaims.Sub,
-		DeviceCode:    refreshTokenClaims.DeviceCode,
-		Token:         refreshTokenString,
-		TokenTypeCode: 'r',
-		ExpirationAt:  refreshTokenClaims.ExpiresAt.Time,
-		IsRevoke:      false,
+	if err := a.store.AddRefreshTokenWithRefreshTokenId(&dto.AddRefreshTokenWithRefreshTokenId{
+		RefreshTokenId: refreshTokenClaims.Jti,
+		UserId:         refreshTokenClaims.Sub,
+		DeviceCode:     refreshTokenClaims.DeviceCode,
+		ExpirationAt:   refreshTokenClaims.ExpiresAt.Time,
+		IsRevoke:       false,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -154,28 +125,16 @@ func (a *AuthService) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.Lo
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentUserId, op).Error())
 	}
-	if err := a.store.RemoveTokensByUserIdAndDeviceCode(&dto.RemoveTokensByUserIdAndDeviceCode{
+	if req.DeviceCode == "" {
+		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentDeviceCode, op).Error())
+	}
+	if err := a.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
 		UserId:     &userId,
 		DeviceCode: &req.DeviceCode,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &pb.LogoutResponse{}, nil
-}
-func (a *AuthService) TokenIsRevoke(ctx context.Context, req *pb.TokenIsRevokeRequest) (*pb.TokenIsRevokeResponse, error) {
-	const op = "authService.TokenIsRevoke"
-	tokenId, err := uuid.Parse(req.TokenId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, errors.Wrapf(servererrors.ErrInvalidArgumentTokenId, op).Error())
-	}
-	token, err := a.store.GetToken(&tokenId)
-	if err != nil {
-		if errors.Is(err, repository.ErrRecordNotFound) {
-			return nil, status.Error(codes.NotFound, servererrors.ErrTokenNotFound.Error())
-		}
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	return &pb.TokenIsRevokeResponse{IsRevoke: token.IsRevoke}, nil
 }
 func (a *AuthService) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*pb.UpdatePasswordResponse, error) {
 	const op = "authService.UpdatePassword"
@@ -194,7 +153,7 @@ func (a *AuthService) UpdatePassword(ctx context.Context, req *pb.UpdatePassword
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := a.store.UpdateTokensRevokeByUserIdAndDeviceCode(&dto.UpdateTokensRevokeByUserIdAndDeviceCode{
+	if err := a.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
 		UserId:     &userId,
 		DeviceCode: nil,
 	}); err != nil {
@@ -202,83 +161,50 @@ func (a *AuthService) UpdatePassword(ctx context.Context, req *pb.UpdatePassword
 	}
 	return &pb.UpdatePasswordResponse{}, nil
 }
-func (a *AuthService) RevokeToken(ctx context.Context, req *pb.RevokeTokenRequest) (*pb.RevokeTokenResponse, error) {
-	const op = "authService.RevokeToken"
-	tokenId, err := uuid.Parse(req.TokenId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentTokenId, op).Error())
-	}
-	if err := a.store.UpdateTokenRevokeByTokenId(&tokenId); err != nil {
-		if errors.Is(err, repository.ErrRecordNotFound) {
-			return nil, status.Error(codes.NotFound, servererrors.ErrTokenNotFound.Error())
-		}
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	return &pb.RevokeTokenResponse{}, nil
-}
-
 func (a *AuthService) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
 	const op = "authService.RefreshToken"
-	tokenId, err := uuid.Parse(req.TokenId)
+	refreshTokenId, err := uuid.Parse(req.RefreshTokenId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentTokenId, op).Error())
 	}
-	token, err := a.store.GetToken(&tokenId)
+	refreshToken, err := a.store.GetRefreshToken(&refreshTokenId)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecordNotFound) {
 			return nil, status.Error(codes.NotFound, servererrors.ErrTokenNotFound.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if token.IsRevoke {
+	if refreshToken.IsRevoke {
+		if err := a.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
+			UserId:     refreshToken.UserId,
+			DeviceCode: &refreshToken.DeviceCode,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 		return nil, status.Error(codes.Unauthenticated, servererrors.ErrTokenRevoked.Error())
 	}
-	if token.TokenTypeCode != 'r' {
-		return nil, status.Error(codes.InvalidArgument, servererrors.ErrInvalidTokenType.Error())
-	}
-	roleIds, err := a.store.GetUserRolesByUserId(token.UserId)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if err := a.store.RemoveTokensByUserIdAndDeviceCode(&dto.RemoveTokensByUserIdAndDeviceCode{
-		UserId:     token.UserId,
-		DeviceCode: &token.DeviceCode,
-	}); err != nil {
+	if err := a.store.RevokeRefreshTokenByRefreshTokenId(&refreshTokenId); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	//access token
-	accessTokenString, accessTokenClaims, err := jwt.CreateToken(token.UserId, token.DeviceCode, roleIds, a.accessLifetime, a.key)
+	accessTokenString, _, err := jwt.CreateToken(refreshToken.UserId, refreshToken.DeviceCode, "access", a.accessLifetime, a.privateKey)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if err := a.store.AddTokenWithTokenId(&dto.AddTokenWithTokenId{
-		TokenId:       accessTokenClaims.Jti,
-		UserId:        accessTokenClaims.Sub,
-		DeviceCode:    accessTokenClaims.DeviceCode,
-		Token:         accessTokenString,
-		TokenTypeCode: 'a',
-		ExpirationAt:  accessTokenClaims.ExpiresAt.Time,
-		IsRevoke:      false,
-	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	//refresh token
-	refreshTokenString, refreshTokenClaims, err := jwt.CreateToken(token.UserId, token.DeviceCode, roleIds, a.refrashLifetime, a.key)
+	refreshTokenString, refreshTokenClaims, err := jwt.CreateToken(refreshToken.UserId, refreshToken.DeviceCode, "refresh", a.refrashLifetime, a.privateKey)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := a.store.AddTokenWithTokenId(&dto.AddTokenWithTokenId{
-		TokenId:       refreshTokenClaims.Jti,
-		UserId:        refreshTokenClaims.Sub,
-		DeviceCode:    refreshTokenClaims.DeviceCode,
-		Token:         refreshTokenString,
-		TokenTypeCode: 'r',
-		ExpirationAt:  refreshTokenClaims.ExpiresAt.Time,
-		IsRevoke:      false,
+	if err := a.store.AddRefreshTokenWithRefreshTokenId(&dto.AddRefreshTokenWithRefreshTokenId{
+		RefreshTokenId: refreshTokenClaims.Jti,
+		UserId:         refreshTokenClaims.Sub,
+		DeviceCode:     refreshTokenClaims.DeviceCode,
+		ExpirationAt:   refreshTokenClaims.ExpiresAt.Time,
+		IsRevoke:       false,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-
 	return &pb.RefreshTokenResponse{
 		AccessToken:  accessTokenString,
 		RefreshToken: refreshTokenString,
