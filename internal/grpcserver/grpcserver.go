@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
-	pb "skillsRockGRPC/gen/go/auth/v3"
+	pb "skillsRockGRPC/grpc/genproto"
 	"skillsRockGRPC/internal/authservice"
 	"skillsRockGRPC/internal/config"
 	"skillsRockGRPC/pkg/servererrors"
@@ -53,21 +56,30 @@ func New(authServer *authservice.AuthService, lg *slog.Logger, cfg *config.Api) 
 		cfg:        cfg,
 	}
 }
-func (g *GRPCServer) Run() error {
-	const op = "grpcserver.Run"
-	listener, err := net.Listen("tcp", g.cfg.Addr)
-	if err != nil {
-		g.lg.Error("application error", slog.String("op", op), slog.Any("error", err))
+func (g *GRPCServer) MustRun() {
+	const op = "grpcserver.MustRun"
+	chErr := make(chan error, 1)
+	defer close(chErr)
+
+	go func() {
+		g.lg.Info(fmt.Sprintf("API Server '%s' is started", g.cfg.Name), slog.String("op", op), slog.String("bind address", g.cfg.Addr))
+		listener, err := net.Listen("tcp", g.cfg.Addr)
+		if err != nil {
+			chErr <- err
+			return
+		}
+		chErr <- g.gRPCServer.Serve(listener)
+	}()
+	go func() {
+		chQuit := make(chan os.Signal, 1)
+		signal.Notify(chQuit, syscall.SIGINT, syscall.SIGTERM)
+		<-chQuit
+		g.gRPCServer.GracefulStop()
+		chErr <- nil
+	}()
+	if err := <-chErr; err != nil {
+		g.lg.Error(fmt.Sprintf("API Server '%s' error", g.cfg.Name), slog.String("op", op), slog.Any("error", err))
+		return
 	}
-	g.lg.Info(fmt.Sprintf("gRPC Server '%s' is started in addr:[%s]", g.cfg.Name, g.cfg.Addr), slog.String("op", op))
-	if err := g.gRPCServer.Serve(listener); err != nil {
-		g.lg.Error("application error", slog.String("op", op), slog.Any("error", err))
-		return err
-	}
-	return nil
-}
-func (g *GRPCServer) Stop() {
-	const op = "grpcserver.Stop"
-	g.gRPCServer.GracefulStop()
-	g.lg.Info(fmt.Sprintf("gRPC Server '%s' is stopped", g.cfg.Name), slog.String("op", op))
+	g.lg.Info(fmt.Sprintf("API Server '%s' is stopped", g.cfg.Name), slog.String("op", op))
 }

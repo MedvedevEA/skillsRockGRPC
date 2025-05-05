@@ -9,29 +9,21 @@ import (
 type AddUser struct {
 	Login    string
 	Password string
-	Email    string
 }
 type UpdateUser struct {
 	UserId   *uuid.UUID
 	Login    *string
 	Password *string
-	Email    *string
 }
 
-type AddTokenWithTokenId struct {
-	TokenId       *uuid.UUID
-	UserId        *uuid.UUID
-	DeviceCode    string
-	Token         string
-	TokenTypeCode rune
-	ExpirationAt  time.Time
-	IsRevoke      bool
+type AddRefreshTokenWithRefreshTokenId struct {
+	RefreshTokenId *uuid.UUID
+	UserId         *uuid.UUID
+	DeviceCode     string
+	ExpirationAt   time.Time
+	IsRevoke       bool
 }
-type UpdateTokensRevokeByUserIdAndDeviceCode struct {
-	UserId     *uuid.UUID
-	DeviceCode *string
-}
-type RemoveTokensByUserIdAndDeviceCode struct {
+type RevokeRefreshTokensByUserIdAndDeviceCode struct {
 	UserId     *uuid.UUID
 	DeviceCode *string
 }

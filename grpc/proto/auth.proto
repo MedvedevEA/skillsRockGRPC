@@ -3,7 +3,7 @@ syntax="proto3";
 
 package auth;
 
-option go_package = "auth/v3;auth";
+option go_package = ".;auth";
 
 service AuthService {
     rpc Register (RegisterRequest) returns (RegisterResponse);
@@ -11,18 +11,15 @@ service AuthService {
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc Logout(LogoutRequest) returns (LogoutResponse);
     rpc UpdatePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
-
-    rpc TokenIsRevoke(TokenIsRevokeRequest) returns (TokenIsRevokeResponse);
-    rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
     rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
 }
 
 message RegisterRequest {
     string login=1;
     string password=2;
-    string email=3;
 }
 message RegisterResponse {
+    string userId=1;
 }
 message UnregisterRequest {
     string userId=1;
@@ -41,7 +38,7 @@ message LoginResponse {
 }
 message LogoutRequest {
     string userId=1;
-    string deviceCode=3;
+    string deviceCode=2;
 }
 message LogoutResponse {
 }
@@ -51,20 +48,8 @@ message UpdatePasswordRequest {
 }
 message UpdatePasswordResponse {
 }
-
-message TokenIsRevokeRequest {
-    string tokenId=1;
-}
-message TokenIsRevokeResponse {
-    bool IsRevoke=1;
-}
-message RevokeTokenRequest {
-    string tokenId=1;
-}
-message RevokeTokenResponse {
-}
 message RefreshTokenRequest {
-    string tokenId=1;
+    string refreshTokenId=1;
 }
 message RefreshTokenResponse {
     string accessToken=1;
