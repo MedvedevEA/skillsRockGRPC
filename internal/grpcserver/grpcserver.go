@@ -56,7 +56,7 @@ func New(authServer *authservice.AuthService, lg *slog.Logger, cfg *config.Api) 
 		cfg:        cfg,
 	}
 }
-func (g *GRPCServer) MustRun() {
+func (g *GRPCServer) Run() {
 	const op = "grpcserver.MustRun"
 	chErr := make(chan error, 1)
 	defer close(chErr)

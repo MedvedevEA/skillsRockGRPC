@@ -23,7 +23,7 @@ func main() {
 	scheduler := scheduler.New(lg, &cfg.Scheduler)
 	scheduler.RemoveRefreshTokens(store.RemoveRefreshTokensByExpirationAt)
 
-	grpcServer.MustRun()
+	grpcServer.Run()
 
 	scheduler.Stop()
 
