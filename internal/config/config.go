@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/pkg/errors"
 )
 
 type Config struct {
 	Env       string    `yaml:"env" env:"AUTH_ENV" env-default:"local"`
 	Token     Token     `yaml:"token" env:"AUTH_TOKEN" env-required:"true"`
-	Api       Api       `yaml:"api"`
+	Grpc      Grpc      `yaml:"grpc"`
+	Http      Http      `yaml:"http"`
 	Store     Store     `yaml:"store"`
 	Scheduler Scheduler `yaml:"scheduler"`
 }
@@ -23,12 +23,15 @@ type Token struct {
 	RefreshLifetime time.Duration `yaml:"refreshLifetime" env:"AUTH_TOKEN_REFRESH_LIFETIME" env-default:"2592000s"`
 }
 
-type Api struct {
-	Addr         string        `yaml:"addr" env:"AUTH_API_ADDR" env-required:"true"`
-	WriteTimeout time.Duration `yaml:"writeTimeout" env:"AUTH_API_WRITE_TIMEOUT" env-required:"true"`
-	Name         string        `yaml:"name" env:"AUTH_API_NAME" env-required:"true"`
+type Grpc struct {
+	Addr         string        `yaml:"addr" env:"AUTH_GRPC_ADDR" env-required:"true"`
+	WriteTimeout time.Duration `yaml:"writeTimeout" env:"AUTH_GRPC_WRITE_TIMEOUT" env-required:"true"`
+	Name         string        `yaml:"name" env:"AUTH_GRPC_NAME" env-required:"true"`
 }
-
+type Http struct {
+	Addr string `yaml:"addr" env:"AUTH_HTTP_ADDR" env-required:"true"`
+	Name string `yaml:"name" env:"AUTH_HTTP_NAME" env-required:"true"`
+}
 type Store struct {
 	Host                string        `yaml:"host" env:"AUTH_STORE_HOST" env-required:"true"`
 	Port                int           `yaml:"port" env:"AUTH_STORE_PORT" env-required:"true"`
@@ -45,39 +48,38 @@ type Scheduler struct {
 }
 
 func MustLoad() *Config {
-	const op = "config.MustLoad"
 
 	configPath := ""
 	cfg := new(Config)
 
 	flag.StringVar(&configPath, "config", "", "path to config file")
 	flag.Parse()
-	configPath = "./../../config/local.yml"
+	//configPath = "./../../config/local.yml"//for debug
 	if configPath != "" {
-		log.Printf("%s: the value of the 'config' flag: %s\n", op, configPath)
+		log.Printf("CONFIG: the value of the 'config' flag: %s\n", configPath)
 		if err := cleanenv.ReadConfig(configPath, cfg); err != nil {
-			log.Fatal(errors.Wrap(err, op))
+			log.Fatalf("CONFIG: %v\n", err)
 		}
-		log.Printf("%s: configuration file %+v", op, cfg)
+		log.Printf("CONFIG: configuration file %+v\n", cfg)
 		return cfg
 	}
-	log.Printf("%s: the 'config' flag is not set\n", op)
+	log.Printf("CONFIG: the 'config' flag is not set\n")
 
 	configPath = os.Getenv("AUTH_CONFIG_PATH")
 	if configPath != "" {
-		log.Printf("%s: the value of the environment variable: %s\n", op, configPath)
+		log.Printf("CONFIG: the value of the environment variable: %s\n", configPath)
 		if err := cleanenv.ReadConfig(configPath, cfg); err != nil {
-			log.Fatal(errors.Wrap(err, op))
+			log.Fatalf("CONFIG: %v\n", err)
 		}
-		log.Printf("%s: configuration file %+v", op, cfg)
+		log.Printf("CONFIG: configuration file %+v\n", cfg)
 		return cfg
 	}
-	log.Printf("%s: environment variable 'AUTH_CONFIG_PATH' is not set\n", op)
+	log.Printf("CONFIG: environment variable 'AUTH_CONFIG_PATH' is not set\n")
 
-	log.Printf("%s: the parameter file is not defined. Loading the application configuration from the environment variables\n", op)
+	log.Printf("CONFIG: the parameter file is not defined. Loading the application configuration from the environment variables\n")
 	if err := cleanenv.ReadEnv(cfg); err != nil {
-		log.Fatalf("%s: %v", op, err)
+		log.Fatalf("CONFIG: %v\n", err)
 	}
-	log.Printf("%s: configuration file %+v", op, cfg)
+	log.Printf("CONFIG: configuration file %+v\n", cfg)
 	return cfg
 }

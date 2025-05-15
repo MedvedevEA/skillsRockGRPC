@@ -3,10 +3,13 @@ token:
   privateKeyPath: ./cert/private.pem
   accessLifetime: 3600s
   refreshLifetime: 432000s
-api:
+grpc:
   addr: :50051
   writeTimeout: 15s
-  name: auth
+  name: authGrpc
+http:
+  addr: :8081
+  name: authHttp
 store:
   host: localhost
   port: 5432

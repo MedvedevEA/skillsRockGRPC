@@ -2,16 +2,15 @@ package grpcserver
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	pb "skillsRockGRPC/grpc/genproto"
-	"skillsRockGRPC/internal/authservice"
+	auth "skillsRockGRPC/grpc/gen"
 	"skillsRockGRPC/internal/config"
+	"skillsRockGRPC/internal/service"
 	"skillsRockGRPC/pkg/servererrors"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -25,7 +24,7 @@ import (
 type GRPCServer struct {
 	lg         *slog.Logger
 	gRPCServer *grpc.Server
-	cfg        *config.Api
+	cfg        *config.Grpc
 }
 
 func InterceptorLogger(l *slog.Logger) logging.Logger {
@@ -33,14 +32,13 @@ func InterceptorLogger(l *slog.Logger) logging.Logger {
 		l.Log(ctx, slog.Level(lvl), msg, fields...)
 	})
 }
-func New(authServer *authservice.AuthService, lg *slog.Logger, cfg *config.Api) *GRPCServer {
-	const op = "grpcserver.New"
+func New(authServer *service.Service, lg *slog.Logger, cfg *config.Grpc) *GRPCServer {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(logging.FinishCall),
 	}
 	recoveryOpts := []recovery.Option{
 		recovery.WithRecoveryHandler(func(p interface{}) (err error) {
-			lg.Error("Recovered from panic", slog.String("op", op), slog.Any("panic", p))
+			lg.Error("GRPC SERVER: recovered from panic", slog.Any("panic", p))
 			return status.Error(codes.Internal, servererrors.ErrInternalServerError.Error())
 		}),
 	}
@@ -48,7 +46,7 @@ func New(authServer *authservice.AuthService, lg *slog.Logger, cfg *config.Api) 
 		recovery.UnaryServerInterceptor(recoveryOpts...),
 		logging.UnaryServerInterceptor(InterceptorLogger(lg), loggingOpts...),
 	))
-	pb.RegisterAuthServiceServer(grpcServer, authServer)
+	auth.RegisterAuthServiceServer(grpcServer, authServer)
 
 	return &GRPCServer{
 		lg:         lg,
@@ -57,12 +55,11 @@ func New(authServer *authservice.AuthService, lg *slog.Logger, cfg *config.Api) 
 	}
 }
 func (g *GRPCServer) Run() {
-	const op = "grpcserver.MustRun"
 	chErr := make(chan error, 1)
 	defer close(chErr)
 
 	go func() {
-		g.lg.Info(fmt.Sprintf("API Server '%s' is started", g.cfg.Name), slog.String("op", op), slog.String("bind address", g.cfg.Addr))
+		g.lg.Info("GRPC server start", slog.String("addr", g.cfg.Addr))
 		listener, err := net.Listen("tcp", g.cfg.Addr)
 		if err != nil {
 			chErr <- err
@@ -78,8 +75,9 @@ func (g *GRPCServer) Run() {
 		chErr <- nil
 	}()
 	if err := <-chErr; err != nil {
-		g.lg.Error(fmt.Sprintf("API Server '%s' error", g.cfg.Name), slog.String("op", op), slog.Any("error", err))
+		g.lg.Error("GRPC server error", slog.Any("error", err))
 		return
 	}
-	g.lg.Info(fmt.Sprintf("API Server '%s' is stopped", g.cfg.Name), slog.String("op", op))
+
+	g.lg.Info("GRPC server stop")
 }

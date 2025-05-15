@@ -1,11 +1,11 @@
-package authservice
+package service
 
 import (
 	"context"
 	"crypto/rsa"
 	"log"
 	"log/slog"
-	pb "skillsRockGRPC/grpc/genproto"
+	auth "skillsRockGRPC/grpc/gen"
 	"skillsRockGRPC/internal/config"
 	"skillsRockGRPC/internal/repository"
 	"skillsRockGRPC/internal/repository/dto"
@@ -21,8 +21,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type AuthService struct {
-	pb.UnimplementedAuthServiceServer
+type Service struct {
+	auth.UnimplementedAuthServiceServer
 	store           repository.Repository
 	privateKey      *rsa.PrivateKey
 	accessLifetime  time.Duration
@@ -30,14 +30,13 @@ type AuthService struct {
 	lg              *slog.Logger
 }
 
-func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *AuthService {
-	const op = "authservice.MustNew"
+func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *Service {
 	privateKey, err := secure.LoadPrivateKey(cfg.PrivateKeyPath)
 	if err != nil {
-		log.Fatalf("%s: %v", op, err)
+		log.Fatalf("SERVICE: %v\n", err)
 	}
 
-	return &AuthService{
+	return &Service{
 		store:           store,
 		privateKey:      privateKey,
 		accessLifetime:  cfg.AccessLifetime,
@@ -46,9 +45,9 @@ func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *A
 	}
 }
 
-func (a *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	//const op = "authService.Register"
-	userId, err := a.store.AddUser(&dto.AddUser{
+func (s *Service) Register(ctx context.Context, req *auth.RegisterRequest) (*auth.RegisterResponse, error) {
+	//const op = "service.Register"
+	userId, err := s.store.AddUser(&dto.AddUser{
 		Login:    req.Login,
 		Password: secure.GetHash(req.Password),
 	})
@@ -58,29 +57,29 @@ func (a *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.RegisterResponse{UserId: userId.String()}, nil
+	return &auth.RegisterResponse{UserId: userId.String()}, nil
 }
-func (a *AuthService) Unregister(ctx context.Context, req *pb.UnregisterRequest) (*pb.UnregisterResponse, error) {
-	const op = "authService.Unregister"
+func (s *Service) Unregister(ctx context.Context, req *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
+	const op = "service.Unregister"
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentUserId, op).Error())
 	}
-	if err := a.store.RemoveUser(&userId); err != nil {
+	if err := s.store.RemoveUser(&userId); err != nil {
 		if errors.Is(err, repository.ErrRecordNotFound) {
 			return nil, status.Error(codes.NotFound, servererrors.ErrUserNotFound.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.UnregisterResponse{}, nil
+	return &auth.UnregisterResponse{}, nil
 
 }
-func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-	const op = "authService.Login"
+func (s *Service) Login(ctx context.Context, req *auth.LoginRequest) (*auth.LoginResponse, error) {
+	const op = "service.Login"
 	if req.DeviceCode == "" {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentDeviceCode, op).Error())
 	}
-	user, err := a.store.GetUserByLogin(req.Login)
+	user, err := s.store.GetUserByLogin(req.Login)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecordNotFound) {
 			return nil, status.Error(codes.Unauthenticated, servererrors.ErrInvalidLoginOrPassword.Error())
@@ -91,23 +90,23 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		err := status.Error(codes.Unauthenticated, servererrors.ErrInvalidLoginOrPassword.Error())
 		return nil, err
 	}
-	if err := a.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
+	if err := s.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
 		UserId:     user.UserId,
 		DeviceCode: &req.DeviceCode,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	//access token
-	accessTokenString, _, err := jwt.CreateToken(user.UserId, req.DeviceCode, "access", a.accessLifetime, a.privateKey)
+	accessTokenString, _, err := jwt.CreateToken(user.UserId, req.DeviceCode, "access", s.accessLifetime, s.privateKey)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	//refresh token
-	refreshTokenString, refreshTokenClaims, err := jwt.CreateToken(user.UserId, req.DeviceCode, "refresh", a.refrashLifetime, a.privateKey)
+	refreshTokenString, refreshTokenClaims, err := jwt.CreateToken(user.UserId, req.DeviceCode, "refresh", s.refrashLifetime, s.privateKey)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := a.store.AddRefreshTokenWithRefreshTokenId(&dto.AddRefreshTokenWithRefreshTokenId{
+	if err := s.store.AddRefreshTokenWithRefreshTokenId(&dto.AddRefreshTokenWithRefreshTokenId{
 		RefreshTokenId: refreshTokenClaims.Jti,
 		UserId:         refreshTokenClaims.Sub,
 		DeviceCode:     refreshTokenClaims.DeviceCode,
@@ -117,10 +116,10 @@ func (a *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &pb.LoginResponse{AccessToken: accessTokenString, RefreshToken: refreshTokenString}, nil
+	return &auth.LoginResponse{AccessToken: accessTokenString, RefreshToken: refreshTokenString}, nil
 }
-func (a *AuthService) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.LogoutResponse, error) {
-	const op = "authService.Logout"
+func (s *Service) Logout(ctx context.Context, req *auth.LogoutRequest) (*auth.LogoutResponse, error) {
+	const op = "service.Logout"
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentUserId, op).Error())
@@ -128,23 +127,23 @@ func (a *AuthService) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.Lo
 	if req.DeviceCode == "" {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentDeviceCode, op).Error())
 	}
-	if err := a.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
+	if err := s.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
 		UserId:     &userId,
 		DeviceCode: &req.DeviceCode,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.LogoutResponse{}, nil
+	return &auth.LogoutResponse{}, nil
 }
-func (a *AuthService) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*pb.UpdatePasswordResponse, error) {
-	const op = "authService.UpdatePassword"
+func (s *Service) UpdatePassword(ctx context.Context, req *auth.UpdatePasswordRequest) (*auth.UpdatePasswordResponse, error) {
+	const op = "Service.UpdatePassword"
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentUserId, op).Error())
 	}
 	hashNewPassword := secure.GetHash(req.NewPassword)
 
-	if err = a.store.UpdateUser(&dto.UpdateUser{
+	if err = s.store.UpdateUser(&dto.UpdateUser{
 		UserId:   &userId,
 		Password: &hashNewPassword,
 	}); err != nil {
@@ -153,21 +152,21 @@ func (a *AuthService) UpdatePassword(ctx context.Context, req *pb.UpdatePassword
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := a.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
+	if err := s.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
 		UserId:     &userId,
 		DeviceCode: nil,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.UpdatePasswordResponse{}, nil
+	return &auth.UpdatePasswordResponse{}, nil
 }
-func (a *AuthService) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
-	const op = "authService.RefreshToken"
+func (s *Service) RefreshToken(ctx context.Context, req *auth.RefreshTokenRequest) (*auth.RefreshTokenResponse, error) {
+	const op = "service.RefreshToken"
 	refreshTokenId, err := uuid.Parse(req.RefreshTokenId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentTokenId, op).Error())
 	}
-	refreshToken, err := a.store.GetRefreshToken(&refreshTokenId)
+	refreshToken, err := s.store.GetRefreshToken(&refreshTokenId)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecordNotFound) {
 			return nil, status.Error(codes.NotFound, servererrors.ErrTokenNotFound.Error())
@@ -175,7 +174,7 @@ func (a *AuthService) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if refreshToken.IsRevoke {
-		if err := a.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
+		if err := s.store.RevokeRefreshTokensByUserIdAndDeviceCode(&dto.RevokeRefreshTokensByUserIdAndDeviceCode{
 			UserId:     refreshToken.UserId,
 			DeviceCode: &refreshToken.DeviceCode,
 		}); err != nil {
@@ -183,20 +182,20 @@ func (a *AuthService) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 		}
 		return nil, status.Error(codes.Unauthenticated, servererrors.ErrTokenRevoked.Error())
 	}
-	if err := a.store.RevokeRefreshTokenByRefreshTokenId(&refreshTokenId); err != nil {
+	if err := s.store.RevokeRefreshTokenByRefreshTokenId(&refreshTokenId); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	//access token
-	accessTokenString, _, err := jwt.CreateToken(refreshToken.UserId, refreshToken.DeviceCode, "access", a.accessLifetime, a.privateKey)
+	accessTokenString, _, err := jwt.CreateToken(refreshToken.UserId, refreshToken.DeviceCode, "access", s.accessLifetime, s.privateKey)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	//refresh token
-	refreshTokenString, refreshTokenClaims, err := jwt.CreateToken(refreshToken.UserId, refreshToken.DeviceCode, "refresh", a.refrashLifetime, a.privateKey)
+	refreshTokenString, refreshTokenClaims, err := jwt.CreateToken(refreshToken.UserId, refreshToken.DeviceCode, "refresh", s.refrashLifetime, s.privateKey)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := a.store.AddRefreshTokenWithRefreshTokenId(&dto.AddRefreshTokenWithRefreshTokenId{
+	if err := s.store.AddRefreshTokenWithRefreshTokenId(&dto.AddRefreshTokenWithRefreshTokenId{
 		RefreshTokenId: refreshTokenClaims.Jti,
 		UserId:         refreshTokenClaims.Sub,
 		DeviceCode:     refreshTokenClaims.DeviceCode,
@@ -205,7 +204,7 @@ func (a *AuthService) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.RefreshTokenResponse{
+	return &auth.RefreshTokenResponse{
 		AccessToken:  accessTokenString,
 		RefreshToken: refreshTokenString,
 	}, nil

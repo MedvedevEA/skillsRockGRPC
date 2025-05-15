@@ -1,4 +1,5 @@
-//protoc --go_out=./gen/go --go-grpc_out=./gen/go ./proto/auth.proto
+//protoc --go_out=./grpc/gen --go-grpc_out=./grpc/gen ./grpc/proto/auth.proto
+
 syntax="proto3";
 
 package auth;
