@@ -10,7 +10,6 @@ import (
 
 	auth "skillsRockGRPC/grpc/gen"
 	"skillsRockGRPC/internal/config"
-	"skillsRockGRPC/internal/httpserver"
 	"skillsRockGRPC/internal/service"
 	"skillsRockGRPC/pkg/servererrors"
 
@@ -25,7 +24,6 @@ import (
 type GRPCServer struct {
 	lg         *slog.Logger
 	gRPCServer *grpc.Server
-	httpServer *httpserver.HttpServer
 	cfg        *config.Grpc
 }
 
@@ -34,14 +32,13 @@ func InterceptorLogger(l *slog.Logger) logging.Logger {
 		l.Log(ctx, slog.Level(lvl), msg, fields...)
 	})
 }
-func New(authServer *service.Service, httpServer *httpserver.HttpServer, lg *slog.Logger, cfg *config.Grpc) *GRPCServer {
-	const op = "grpcserver.New"
+func New(authServer *service.Service, lg *slog.Logger, cfg *config.Grpc) *GRPCServer {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(logging.FinishCall),
 	}
 	recoveryOpts := []recovery.Option{
 		recovery.WithRecoveryHandler(func(p interface{}) (err error) {
-			lg.Error("Recovered from panic", slog.String("op", op), slog.Any("panic", p))
+			lg.Error("GRPC SERVER: recovered from panic", slog.Any("panic", p))
 			return status.Error(codes.Internal, servererrors.ErrInternalServerError.Error())
 		}),
 	}
@@ -54,7 +51,6 @@ func New(authServer *service.Service, httpServer *httpserver.HttpServer, lg *slo
 	return &GRPCServer{
 		lg:         lg,
 		gRPCServer: grpcServer,
-		httpServer: httpServer,
 		cfg:        cfg,
 	}
 }
@@ -63,7 +59,7 @@ func (g *GRPCServer) Run() {
 	defer close(chErr)
 
 	go func() {
-		g.lg.Info("gRPC server start")
+		g.lg.Info("GRPC server start", slog.String("addr", g.cfg.Addr))
 		listener, err := net.Listen("tcp", g.cfg.Addr)
 		if err != nil {
 			chErr <- err
@@ -79,9 +75,9 @@ func (g *GRPCServer) Run() {
 		chErr <- nil
 	}()
 	if err := <-chErr; err != nil {
-		g.lg.Error("gRPC server error", slog.Any("error", err))
+		g.lg.Error("GRPC server error", slog.Any("error", err))
 		return
 	}
 
-	g.lg.Info("gRPC server stop")
+	g.lg.Info("GRPC server stop")
 }

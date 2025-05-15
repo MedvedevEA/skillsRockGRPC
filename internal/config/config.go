@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/pkg/errors"
 )
 
 type Config struct {
@@ -49,7 +48,6 @@ type Scheduler struct {
 }
 
 func MustLoad() *Config {
-	const op = "config.MustLoad"
 
 	configPath := ""
 	cfg := new(Config)
@@ -58,30 +56,30 @@ func MustLoad() *Config {
 	flag.Parse()
 	configPath = "./../../config/local.yml"
 	if configPath != "" {
-		log.Printf("%s: the value of the 'config' flag: %s\n", op, configPath)
+		log.Printf("CONFIG: the value of the 'config' flag: %s\n", configPath)
 		if err := cleanenv.ReadConfig(configPath, cfg); err != nil {
-			log.Fatal(errors.Wrap(err, op))
+			log.Fatalf("CONFIG: %v\n", err)
 		}
-		log.Printf("%s: configuration file %+v", op, cfg)
+		log.Printf("CONFIG: configuration file %+v\n", cfg)
 		return cfg
 	}
-	log.Printf("%s: the 'config' flag is not set\n", op)
+	log.Printf("CONFIG: the 'config' flag is not set\n")
 
 	configPath = os.Getenv("AUTH_CONFIG_PATH")
 	if configPath != "" {
-		log.Printf("%s: the value of the environment variable: %s\n", op, configPath)
+		log.Printf("CONFIG: the value of the environment variable: %s\n", configPath)
 		if err := cleanenv.ReadConfig(configPath, cfg); err != nil {
-			log.Fatal(errors.Wrap(err, op))
+			log.Fatalf("CONFIG: %v\n", err)
 		}
-		log.Printf("%s: configuration file %+v", op, cfg)
+		log.Printf("CONFIG: configuration file %+v\n", cfg)
 		return cfg
 	}
-	log.Printf("%s: environment variable 'AUTH_CONFIG_PATH' is not set\n", op)
+	log.Printf("CONFIG: environment variable 'AUTH_CONFIG_PATH' is not set\n")
 
-	log.Printf("%s: the parameter file is not defined. Loading the application configuration from the environment variables\n", op)
+	log.Printf("CONFIG: the parameter file is not defined. Loading the application configuration from the environment variables\n")
 	if err := cleanenv.ReadEnv(cfg); err != nil {
-		log.Fatalf("%s: %v", op, err)
+		log.Fatalf("CONFIG: %v\n", err)
 	}
-	log.Printf("%s: configuration file %+v", op, cfg)
+	log.Printf("CONFIG: configuration file %+v\n", cfg)
 	return cfg
 }

@@ -31,10 +31,9 @@ type Service struct {
 }
 
 func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *Service {
-	const op = "service.MustNew"
 	privateKey, err := secure.LoadPrivateKey(cfg.PrivateKeyPath)
 	if err != nil {
-		log.Fatalf("%s: %v", op, err)
+		log.Fatalf("SERVICE: %v\n", err)
 	}
 
 	return &Service{

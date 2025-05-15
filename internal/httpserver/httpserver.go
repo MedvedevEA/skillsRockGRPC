@@ -20,16 +20,14 @@ type HttpServer struct {
 	cfg        *config.Http
 }
 
-func New(lg *slog.Logger, cfgHttp *config.Http, cfgGrpc *config.Grpc) *HttpServer {
+func MustNew(lg *slog.Logger, cfgHttp *config.Http, cfgGrpc *config.Grpc) *HttpServer {
 
-	const op = "httpserver.New"
 	ctx := context.Background()
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	err := auth.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, cfgGrpc.Addr, opts)
-	//RegisterGatewayHandlerFromEndpoint(ctx, mux, cfgGrpc.Addr, opts)
 	if err != nil {
-		log.Fatalf("%s: %v", op, err)
+		log.Fatalf("HTTP server: %v", err)
 	}
 	httpServer := &http.Server{
 		Addr:    cfgHttp.Addr,
@@ -44,7 +42,7 @@ func New(lg *slog.Logger, cfgHttp *config.Http, cfgGrpc *config.Grpc) *HttpServe
 }
 func (h *HttpServer) Run() {
 	go func() {
-		h.lg.Info("HTTP serever start")
+		h.lg.Info("HTTP serever start", slog.String("addr", h.cfg.Addr))
 		if err := h.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			h.lg.Error("HTTP server error", slog.Any("error", err))
 		}

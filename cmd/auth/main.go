@@ -19,10 +19,10 @@ func main() {
 
 	service := service.MustNew(store, lg, &cfg.Token)
 
-	httpServer := httpserver.New(lg, &cfg.Http, &cfg.Grpc)
+	httpServer := httpserver.MustNew(lg, &cfg.Http, &cfg.Grpc)
 	httpServer.Run()
 
-	grpcServer := grpcserver.New(service, httpServer, lg, &cfg.Grpc)
+	grpcServer := grpcserver.New(service, lg, &cfg.Grpc)
 
 	scheduler := scheduler.New(lg, &cfg.Scheduler)
 	scheduler.RemoveRefreshTokens(store.RemoveRefreshTokensByExpirationAt)
