@@ -54,7 +54,7 @@ func MustLoad() *Config {
 
 	flag.StringVar(&configPath, "config", "", "path to config file")
 	flag.Parse()
-	configPath = "./../../config/local.yml"
+	//configPath = "./../../config/local.yml"//for debug
 	if configPath != "" {
 		log.Printf("CONFIG: the value of the 'config' flag: %s\n", configPath)
 		if err := cleanenv.ReadConfig(configPath, cfg); err != nil {
