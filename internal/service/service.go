@@ -5,7 +5,7 @@ import (
 	"crypto/rsa"
 	"log"
 	"log/slog"
-	pb "skillsRockGRPC/grpc/genproto"
+	auth "skillsRockGRPC/grpc/gen"
 	"skillsRockGRPC/internal/config"
 	"skillsRockGRPC/internal/repository"
 	"skillsRockGRPC/internal/repository/dto"
@@ -22,7 +22,7 @@ import (
 )
 
 type Service struct {
-	pb.UnimplementedAuthServiceServer
+	auth.UnimplementedAuthServiceServer
 	store           repository.Repository
 	privateKey      *rsa.PrivateKey
 	accessLifetime  time.Duration
@@ -46,7 +46,7 @@ func MustNew(store repository.Repository, lg *slog.Logger, cfg *config.Token) *S
 	}
 }
 
-func (s *Service) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+func (s *Service) Register(ctx context.Context, req *auth.RegisterRequest) (*auth.RegisterResponse, error) {
 	//const op = "service.Register"
 	userId, err := s.store.AddUser(&dto.AddUser{
 		Login:    req.Login,
@@ -58,9 +58,9 @@ func (s *Service) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Re
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.RegisterResponse{UserId: userId.String()}, nil
+	return &auth.RegisterResponse{UserId: userId.String()}, nil
 }
-func (s *Service) Unregister(ctx context.Context, req *pb.UnregisterRequest) (*pb.UnregisterResponse, error) {
+func (s *Service) Unregister(ctx context.Context, req *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
 	const op = "service.Unregister"
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
@@ -72,10 +72,10 @@ func (s *Service) Unregister(ctx context.Context, req *pb.UnregisterRequest) (*p
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.UnregisterResponse{}, nil
+	return &auth.UnregisterResponse{}, nil
 
 }
-func (s *Service) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+func (s *Service) Login(ctx context.Context, req *auth.LoginRequest) (*auth.LoginResponse, error) {
 	const op = "service.Login"
 	if req.DeviceCode == "" {
 		return nil, status.Error(codes.InvalidArgument, errors.Wrap(servererrors.ErrInvalidArgumentDeviceCode, op).Error())
@@ -117,9 +117,9 @@ func (s *Service) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginRes
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &pb.LoginResponse{AccessToken: accessTokenString, RefreshToken: refreshTokenString}, nil
+	return &auth.LoginResponse{AccessToken: accessTokenString, RefreshToken: refreshTokenString}, nil
 }
-func (s *Service) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.LogoutResponse, error) {
+func (s *Service) Logout(ctx context.Context, req *auth.LogoutRequest) (*auth.LogoutResponse, error) {
 	const op = "service.Logout"
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
@@ -134,9 +134,9 @@ func (s *Service) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.Logout
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.LogoutResponse{}, nil
+	return &auth.LogoutResponse{}, nil
 }
-func (s *Service) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*pb.UpdatePasswordResponse, error) {
+func (s *Service) UpdatePassword(ctx context.Context, req *auth.UpdatePasswordRequest) (*auth.UpdatePasswordResponse, error) {
 	const op = "Service.UpdatePassword"
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
@@ -159,9 +159,9 @@ func (s *Service) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequ
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.UpdatePasswordResponse{}, nil
+	return &auth.UpdatePasswordResponse{}, nil
 }
-func (s *Service) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
+func (s *Service) RefreshToken(ctx context.Context, req *auth.RefreshTokenRequest) (*auth.RefreshTokenResponse, error) {
 	const op = "service.RefreshToken"
 	refreshTokenId, err := uuid.Parse(req.RefreshTokenId)
 	if err != nil {
@@ -205,7 +205,7 @@ func (s *Service) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest)
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.RefreshTokenResponse{
+	return &auth.RefreshTokenResponse{
 		AccessToken:  accessTokenString,
 		RefreshToken: refreshTokenString,
 	}, nil

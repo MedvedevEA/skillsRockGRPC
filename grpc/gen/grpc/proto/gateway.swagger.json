@@ -1,13 +1,10 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "grpc/proto/auth.proto",
+    "title": "grpc/proto/gateway.proto",
     "version": "version not set"
   },
   "tags": [
-    {
-      "name": "Gateway"
-    },
     {
       "name": "AuthService"
     }
@@ -21,7 +18,7 @@
   "paths": {
     "/api/v1/login": {
       "post": {
-        "operationId": "Gateway_Login",
+        "operationId": "AuthService_Login",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -47,13 +44,13 @@
           }
         ],
         "tags": [
-          "Gateway"
+          "AuthService"
         ]
       }
     },
     "/api/v1/logout": {
       "post": {
-        "operationId": "Gateway_Logout",
+        "operationId": "AuthService_Logout",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -74,18 +71,18 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/authLoginRequest"
+              "$ref": "#/definitions/authLogoutRequest"
             }
           }
         ],
         "tags": [
-          "Gateway"
+          "AuthService"
         ]
       }
     },
     "/api/v1/refreshtoken": {
       "post": {
-        "operationId": "Gateway_RefreshToken",
+        "operationId": "AuthService_RefreshToken",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -111,13 +108,13 @@
           }
         ],
         "tags": [
-          "Gateway"
+          "AuthService"
         ]
       }
     },
     "/api/v1/register": {
       "post": {
-        "operationId": "Gateway_Register",
+        "operationId": "AuthService_Register",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -143,13 +140,13 @@
           }
         ],
         "tags": [
-          "Gateway"
+          "AuthService"
         ]
       }
     },
     "/api/v1/unregister": {
       "post": {
-        "operationId": "Gateway_Unregister",
+        "operationId": "AuthService_Unregister",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -175,13 +172,13 @@
           }
         ],
         "tags": [
-          "Gateway"
+          "AuthService"
         ]
       }
     },
     "/api/v1/updatepassword": {
       "post": {
-        "operationId": "Gateway_UpdatePassword",
+        "operationId": "AuthService_UpdatePassword",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -207,7 +204,7 @@
           }
         ],
         "tags": [
-          "Gateway"
+          "AuthService"
         ]
       }
     }
@@ -234,6 +231,17 @@
           "type": "string"
         },
         "refreshToken": {
+          "type": "string"
+        }
+      }
+    },
+    "authLogoutRequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "deviceCode": {
           "type": "string"
         }
       }

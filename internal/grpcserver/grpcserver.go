@@ -2,15 +2,15 @@ package grpcserver
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	pb "skillsRockGRPC/grpc/genproto"
+	auth "skillsRockGRPC/grpc/gen"
 	"skillsRockGRPC/internal/config"
+	"skillsRockGRPC/internal/httpserver"
 	"skillsRockGRPC/internal/service"
 	"skillsRockGRPC/pkg/servererrors"
 
@@ -25,6 +25,7 @@ import (
 type GRPCServer struct {
 	lg         *slog.Logger
 	gRPCServer *grpc.Server
+	httpServer *httpserver.HttpServer
 	cfg        *config.Grpc
 }
 
@@ -33,7 +34,7 @@ func InterceptorLogger(l *slog.Logger) logging.Logger {
 		l.Log(ctx, slog.Level(lvl), msg, fields...)
 	})
 }
-func New(authServer *service.Service, lg *slog.Logger, cfg *config.Grpc) *GRPCServer {
+func New(authServer *service.Service, httpServer *httpserver.HttpServer, lg *slog.Logger, cfg *config.Grpc) *GRPCServer {
 	const op = "grpcserver.New"
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(logging.FinishCall),
@@ -48,21 +49,21 @@ func New(authServer *service.Service, lg *slog.Logger, cfg *config.Grpc) *GRPCSe
 		recovery.UnaryServerInterceptor(recoveryOpts...),
 		logging.UnaryServerInterceptor(InterceptorLogger(lg), loggingOpts...),
 	))
-	pb.RegisterAuthServiceServer(grpcServer, authServer)
+	auth.RegisterAuthServiceServer(grpcServer, authServer)
 
 	return &GRPCServer{
 		lg:         lg,
 		gRPCServer: grpcServer,
+		httpServer: httpServer,
 		cfg:        cfg,
 	}
 }
 func (g *GRPCServer) Run() {
-	const op = "grpcserver.Run"
 	chErr := make(chan error, 1)
 	defer close(chErr)
 
 	go func() {
-		g.lg.Info(fmt.Sprintf("API Server '%s' is started", g.cfg.Name), slog.String("op", op), slog.String("bind address", g.cfg.Addr))
+		g.lg.Info("gRPC server start")
 		listener, err := net.Listen("tcp", g.cfg.Addr)
 		if err != nil {
 			chErr <- err
@@ -78,8 +79,9 @@ func (g *GRPCServer) Run() {
 		chErr <- nil
 	}()
 	if err := <-chErr; err != nil {
-		g.lg.Error(fmt.Sprintf("API Server '%s' error", g.cfg.Name), slog.String("op", op), slog.Any("error", err))
+		g.lg.Error("gRPC server error", slog.Any("error", err))
 		return
 	}
-	g.lg.Info(fmt.Sprintf("API Server '%s' is stopped", g.cfg.Name), slog.String("op", op))
+
+	g.lg.Info("gRPC server stop")
 }
