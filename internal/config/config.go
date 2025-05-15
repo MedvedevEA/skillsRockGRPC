@@ -13,7 +13,8 @@ import (
 type Config struct {
 	Env       string    `yaml:"env" env:"AUTH_ENV" env-default:"local"`
 	Token     Token     `yaml:"token" env:"AUTH_TOKEN" env-required:"true"`
-	Api       Api       `yaml:"api"`
+	Grpc      Grpc      `yaml:"grpc"`
+	Http      Http      `yaml:"http"`
 	Store     Store     `yaml:"store"`
 	Scheduler Scheduler `yaml:"scheduler"`
 }
@@ -23,12 +24,15 @@ type Token struct {
 	RefreshLifetime time.Duration `yaml:"refreshLifetime" env:"AUTH_TOKEN_REFRESH_LIFETIME" env-default:"2592000s"`
 }
 
-type Api struct {
-	Addr         string        `yaml:"addr" env:"AUTH_API_ADDR" env-required:"true"`
-	WriteTimeout time.Duration `yaml:"writeTimeout" env:"AUTH_API_WRITE_TIMEOUT" env-required:"true"`
-	Name         string        `yaml:"name" env:"AUTH_API_NAME" env-required:"true"`
+type Grpc struct {
+	Addr         string        `yaml:"addr" env:"AUTH_GRPC_ADDR" env-required:"true"`
+	WriteTimeout time.Duration `yaml:"writeTimeout" env:"AUTH_GRPC_WRITE_TIMEOUT" env-required:"true"`
+	Name         string        `yaml:"name" env:"AUTH_GRPC_NAME" env-required:"true"`
 }
-
+type Http struct {
+	Addr string `yaml:"addr" env:"AUTH_HTTP_ADDR" env-required:"true"`
+	Name string `yaml:"name" env:"AUTH_HTTP_NAME" env-required:"true"`
+}
 type Store struct {
 	Host                string        `yaml:"host" env:"AUTH_STORE_HOST" env-required:"true"`
 	Port                int           `yaml:"port" env:"AUTH_STORE_PORT" env-required:"true"`

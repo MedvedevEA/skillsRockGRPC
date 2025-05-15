@@ -10,8 +10,8 @@ import (
 	"syscall"
 
 	pb "skillsRockGRPC/grpc/genproto"
-	"skillsRockGRPC/internal/authservice"
 	"skillsRockGRPC/internal/config"
+	"skillsRockGRPC/internal/service"
 	"skillsRockGRPC/pkg/servererrors"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -25,7 +25,7 @@ import (
 type GRPCServer struct {
 	lg         *slog.Logger
 	gRPCServer *grpc.Server
-	cfg        *config.Api
+	cfg        *config.Grpc
 }
 
 func InterceptorLogger(l *slog.Logger) logging.Logger {
@@ -33,7 +33,7 @@ func InterceptorLogger(l *slog.Logger) logging.Logger {
 		l.Log(ctx, slog.Level(lvl), msg, fields...)
 	})
 }
-func New(authServer *authservice.AuthService, lg *slog.Logger, cfg *config.Api) *GRPCServer {
+func New(authServer *service.Service, lg *slog.Logger, cfg *config.Grpc) *GRPCServer {
 	const op = "grpcserver.New"
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(logging.FinishCall),
@@ -57,7 +57,7 @@ func New(authServer *authservice.AuthService, lg *slog.Logger, cfg *config.Api) 
 	}
 }
 func (g *GRPCServer) Run() {
-	const op = "grpcserver.MustRun"
+	const op = "grpcserver.Run"
 	chErr := make(chan error, 1)
 	defer close(chErr)
 

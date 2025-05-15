@@ -1,9 +1,56 @@
 //protoc --go_out=./gen/go --go-grpc_out=./gen/go ./proto/auth.proto
+
+//protoc --go_out=./grpc/genproto --go-grpc_out=./grpc/genproto --grpc-gateway_out=./grpc/genproto --grpc-gateway_opt generate_unbound_methods=true --openapiv2_out ./grpc/genproto ./grpc/proto/auth.proto
 syntax="proto3";
 
 package auth;
 
 option go_package = ".;auth";
+
+import "google/api/annotations.proto";
+
+service Gateway {
+  rpc Register(RegisterRequest) returns (RegisterResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/register"
+      body: "*"
+    };
+  }
+  rpc Unregister(UnregisterRequest) returns (UnregisterResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/unregister"
+      body: "*"
+    };
+  }
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/login"
+      body: "*"
+    };
+  }
+  rpc Logout(LoginRequest) returns (LogoutResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/logout"
+      body: "*"
+    };
+  }
+  rpc UpdatePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/updatepassword"
+      body: "*"
+    };
+  }
+    rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/refreshtoken"
+      body: "*"
+    };
+  }
+}
+
+message Message {
+  uint64 id = 1;
+}
 
 service AuthService {
     rpc Register (RegisterRequest) returns (RegisterResponse);

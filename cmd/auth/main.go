@@ -1,11 +1,11 @@
 package main
 
 import (
-	"skillsRockGRPC/internal/authservice"
 	"skillsRockGRPC/internal/config"
 	"skillsRockGRPC/internal/grpcserver"
 	"skillsRockGRPC/internal/logger"
 	"skillsRockGRPC/internal/scheduler"
+	"skillsRockGRPC/internal/service"
 	"skillsRockGRPC/internal/store"
 )
 
@@ -16,9 +16,9 @@ func main() {
 
 	store := store.MustNew(lg, &cfg.Store)
 
-	authService := authservice.MustNew(store, lg, &cfg.Token)
+	service := service.MustNew(store, lg, &cfg.Token)
 
-	grpcServer := grpcserver.New(authService, lg, &cfg.Api)
+	grpcServer := grpcserver.New(service, lg, &cfg.Grpc)
 
 	scheduler := scheduler.New(lg, &cfg.Scheduler)
 	scheduler.RemoveRefreshTokens(store.RemoveRefreshTokensByExpirationAt)
